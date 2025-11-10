@@ -34,6 +34,14 @@
         .btn-primary:hover {
             background-color: #005f6b;
         }
+        .btn-secondary {
+            background-color: #006b5e; /* sell-bar color */
+            color: #edfcff;
+            transition: background-color 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #008a7b; /* sell-bar hover */
+        }
         .card {
             background-color: #edfcff;
             border-radius: 1rem;
@@ -168,14 +176,19 @@
                                 <span>Back-load</span>
                             </div>
                         </div>
-                        <button type="submit" class="btn-primary w-full font-bold py-3 px-4 rounded-lg text-lg">Generate Plan</button>
+                        <!-- Removed Generate Plan button -->
                     </form>
                 </div>
             </div>
 
             <div id="results-panel" class="lg:col-span-2 space-y-6">
                 <div class="card p-6">
-                    <h2 class="text-2xl font-semibold text-primary-dark mb-4">Plan Summary</h2>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-semibold text-primary-dark">Plan Summary</h2>
+                        <button id="download-csv-btn" class="btn-secondary text-sm font-medium py-2 px-4 rounded-lg">
+                            Download CSV
+                        </button>
+                    </div>
                     <div id="summary" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
                         <div class="summary-card p-4 rounded-lg">
                             <p class="text-sm text-secondary-dark">Avg. Buy Price</p>
@@ -216,7 +229,8 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <!-- Updated grid to md:grid-cols-2 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="card p-6">
                         <h3 class="text-xl font-semibold text-primary-dark mb-4">Buy Ladder</h3>
                         <div class="overflow-x-auto">
@@ -260,6 +274,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Store plan data for CSV export
+            let currentPlanData = null;
+
             const form = document.getElementById('trading-plan-form');
             const skewSlider = document.getElementById('skew_value');
             const skewDisplay = document.getElementById('skew_value_display');
@@ -277,11 +294,11 @@
 
                 let alertOverlay = document.createElement('div');
                 alertOverlay.id = 'custom-alert-overlay';
-                alertOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center';
+                alertOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4';
                 
                 let alertBox = document.createElement('div');
                 alertBox.id = 'custom-alert';
-                alertBox.className = 'bg-white rounded-lg shadow-xl p-6 w-11/12 md:w-1/3 z-50';
+                alertBox.className = 'bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-50';
                 
                 let alertTitle = document.createElement('h3');
                 alertTitle.className = 'text-lg font-medium text-gray-900 mb-4';
@@ -293,7 +310,7 @@
                 
                 let alertButton = document.createElement('button');
                 alertButton.id = 'custom-alert-close';
-                alertButton.className = 'w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50';
+                alertButton.className = 'w-full px-4 py-2 btn-primary rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
                 alertButton.textContent = 'OK';
                 
                 alertButton.onclick = function() {
@@ -319,21 +336,24 @@
                 const depth = parseFloat(document.getElementById('depth').value);
 
                 if ([C, N, S, currentPrice, depth].some(isNaN)) {
-                    showModalAlert("Please ensure all inputs are valid numbers.");
+                    // Don't show alert on load if fields are empty, only if they are invalid
+                     if (document.activeElement && document.activeElement.closest('form')) {
+                         showModalAlert("Please ensure all inputs are valid numbers.");
+                     }
                     return;
                 }
                 
                 if (depth <= 0) {
-                    showModalAlert("Depth must be a positive percentage.");
-                    return;
+                    // showModalAlert("Depth must be a positive percentage.");
+                    return; // Fail silently on real-time update
                 }
                 if (currentPrice <= 0) {
-                    showModalAlert("Current Price must be positive.");
-                    return;
+                    // showModalAlert("Current Price must be positive.");
+                    return; // Fail silently on real-time update
                 }
                 if (N < 2) {
-                     showModalAlert("Number of rungs must be at least 2.");
-                    return;
+                    //  showModalAlert("Number of rungs must be at least 2.");
+                    return; // Fail silently on real-time update
                 }
 
                 // 2. Calculate Skew Weights
@@ -368,7 +388,7 @@
                     // Rung 1 (i=0) is at currentPrice - (1 * step)
                     // Rung N (i=N-1) is at currentPrice - (N * step) == buyPriceEnd
                     const price = currentPrice - ((i + 1) * buyPriceStep); 
-                    const assetSize = capital / price;
+                    const assetSize = price > 0 ? capital / price : 0;
                     return {
                         rung: i + 1,
                         price,
@@ -380,7 +400,7 @@
 
                 // 6. Calculate Average Entry & Total Asset
                 const totalAssetBought = buyLadder.reduce((sum, rung) => sum + rung.assetSize, 0);
-                const avgBuyPrice = C / totalAssetBought;
+                const avgBuyPrice = totalAssetBought > 0 ? C / totalAssetBought : 0;
 
                 // 7. Calculate Sell Ladder
                 // Symmetrical asset allocation: more assets sold at later rungs (higher prices) if back-loaded
@@ -411,9 +431,9 @@
 
                 // 9. Final Summary
                 const totalProfit = sellLadder.reduce((sum, rung) => sum + rung.profit, 0);
-                const actualROI = (totalProfit / C) * 100;
+                const actualROI = C > 0 ? (totalProfit / C) * 100 : 0;
 
-                updateUI({
+                const plan = {
                     summary: { 
                         avgBuyPrice: avgBuyPrice,
                         avgSellPrice: avgSellPrice,
@@ -423,10 +443,15 @@
                     },
                     buyLadder,
                     sellLadder
-                });
+                };
+                
+                updateUI(plan);
             }
 
             function updateUI(plan) {
+                // Store data for CSV export
+                currentPlanData = plan;
+
                 // Update summary cards
                 document.getElementById('summary-avg-buy').textContent = formatCurrency(plan.summary.avgBuyPrice);
                 document.getElementById('summary-avg-sell').textContent = formatCurrency(plan.summary.avgSellPrice);
@@ -484,6 +509,7 @@
                     console.error("Could not get container width:", e);
                     width = 500 - margin.left - margin.right; // Fallback width
                 }
+                width = Math.max(width, 100); // Ensure width is positive
                 const height = 300 - margin.top - margin.bottom;
 
                 const svg = d3.select("#allocation-chart")
@@ -578,6 +604,7 @@
                     console.error("Could not get container width:", e);
                     width = 500 - margin.left - margin.right; // Fallback width
                 }
+                width = Math.max(width, 100); // Ensure width is positive
                 const height = 300 - margin.top - margin.bottom;
 
                 const svg = d3.select("#sell-allocation-chart")
@@ -658,21 +685,135 @@
                     .delay((d, i) => i * 20);
             }
 
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                calculatePlan();
+            // --- Real-time updates ---
+
+            // Debounce function
+            function debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    const context = this;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), wait);
+                };
+            }
+
+            // Debounced calculate function for number inputs
+            const debouncedCalculate = debounce(calculatePlan, 300); // 300ms delay
+
+            // Add listeners to number inputs
+            const inputsToTrack = [
+                'starting_capital',
+                'number_of_rungs',
+                'current_price',
+                'depth'
+            ];
+
+            inputsToTrack.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.addEventListener('input', debouncedCalculate);
+                }
             });
 
+            // The skew slider updates instantly
             skewSlider.addEventListener('input', (e) => {
                 skewDisplay.textContent = e.target.value;
+                calculatePlan(); 
             });
+            
+            // --- CSV Download ---
+            const downloadBtn = document.getElementById('download-csv-btn');
+            downloadBtn.addEventListener('click', () => {
+                if (!currentPlanData) {
+                    showModalAlert("No data to download. Adjust settings to generate a plan.");
+                    return;
+                }
+
+                const plan = currentPlanData;
+                
+                // Get settings
+                const settings = {
+                    date: new Date().toLocaleString(),
+                    startingCapital: document.getElementById('starting_capital').value,
+                    rungs: document.getElementById('number_of_rungs').value,
+                    currentPrice: document.getElementById('current_price').value,
+                    depth: document.getElementById('depth').value,
+                    skew: document.getElementById('skew_value').value
+                };
+
+                let csvContent = "";
+
+                // Section 1: Settings
+                csvContent += "Setting,Value\r\n";
+                csvContent += `Date,"${settings.date}"\r\n`;
+                csvContent += `Starting Capital,${settings.startingCapital}\r\n`;
+                csvContent += `Number of Rungs,${settings.rungs}\r\n`;
+                csvContent += `Current Price,${settings.currentPrice}\r\n`;
+                csvContent += `Depth (%),${settings.depth}\r\n`;
+                csvContent += `Skew,${settings.skew}\r\n`;
+                csvContent += "\r\n";
+
+                // Section 2: Summary
+                csvContent += "Summary Metric,Value\r\n";
+                csvContent += `Avg. Buy Price,${plan.summary.avgBuyPrice}\r\n`;
+                csvContent += `Avg. Sell Price,${plan.summary.avgSellPrice}\r\n`;
+                csvContent += `Total Profit,${plan.summary.totalProfit}\r\n`;
+                csvContent += `Total Asset,${plan.summary.totalAssetBought}\r\n`;
+                csvContent += `Actual ROI (%),${plan.summary.actualROI}\r\n`;
+                csvContent += "\r\n";
+
+                // Section 3: Ladders
+                csvContent += "Buy Rung,Buy Price,Buy Capital,Buy Allocation (%),Buy Asset Size,,Sell Rung,Sell Price,Sell Capital,Sell Allocation (%),Sell Asset Size,Sell Profit\r\n";
+                
+                const numRungs = plan.buyLadder.length; // Assumes buy and sell have same length
+                for (let i = 0; i < numRungs; i++) {
+                    const buyRung = plan.buyLadder[i];
+                    const sellRung = plan.sellLadder[i];
+                    
+                    const buyRow = [
+                        buyRung.rung,
+                        buyRung.price,
+                        buyRung.capital,
+                        buyRung.allocation,
+                        buyRung.assetSize
+                    ].join(',');
+                    
+                    const sellRow = [
+                        sellRung.rung,
+                        sellRung.price,
+                        sellRung.capital,
+                        sellRung.allocation,
+                        sellRung.assetSize,
+                        sellRung.profit
+                    ].join(',');
+
+                    csvContent += `${buyRow},,${sellRow}\r\n`;
+                }
+
+                // Create and trigger download
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `trading_plan_${new Date().toISOString().slice(0,10)}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+
+            // --- Resize and Initial Load ---
             
             // Debounce resize event
             let resizeTimer;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(() => {
-                    calculatePlan();
+                    // Only calculate if we have valid data
+                    if (currentPlanData) {
+                        calculatePlan();
+                    }
                 }, 250); // Redraw 250ms after resize events stop
             });
 
