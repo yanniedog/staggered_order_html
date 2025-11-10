@@ -62,6 +62,10 @@
         .table-row-even {
             background-color: #f8fafa;
         }
+        .executed-rung td {
+            background-color: #cde9d6;
+            font-weight: 600;
+        }
         .label-invalid {
             color: #b91c1c !important;
         }
@@ -406,6 +410,10 @@
         document.addEventListener('DOMContentLoaded', function () {
             // Store plan data for CSV export
             let currentPlanData = null;
+            const sellOnlyState = {
+                highestExecutedRung: null,
+                checkboxElements: []
+            };
 
             const form = document.getElementById('trading-plan-form');
             const skewSlider = document.getElementById('skew_value');
@@ -439,6 +447,105 @@
             const formatNumber = (value, digits = 4) => Number.isFinite(value) ? value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: digits }) : '0';
             const clampNumber = (value, min, max) => Math.min(Math.max(value, min), max);
             const MAX_SKEW_RATIO = 10;
+
+            const deriveExecutedBuyTotals = (buyLadder, highestRung) => {
+                if (!Array.isArray(buyLadder) || buyLadder.length === 0 || !Number.isFinite(highestRung)) {
+                    return {
+                        quantity: 0,
+                        netCapital: 0,
+                        fees: 0,
+                        avgPrice: 0
+                    };
+                }
+                const executed = buyLadder.filter(rung => rung.rung <= highestRung && rung.assetSize > 0);
+                if (executed.length === 0) {
+                    return {
+                        quantity: 0,
+                        netCapital: 0,
+                        fees: 0,
+                        avgPrice: 0
+                    };
+                }
+                const quantity = executed.reduce((sum, rung) => sum + rung.assetSize, 0);
+                const netCapital = executed.reduce((sum, rung) => sum + rung.netCapital, 0);
+                const fees = executed.reduce((sum, rung) => sum + rung.fee, 0);
+                const avgPrice = quantity > 0 ? netCapital / quantity : 0;
+                return {
+                    quantity,
+                    netCapital,
+                    fees,
+                    avgPrice
+                };
+            };
+
+            const updateSellOnlyCheckboxDisplay = () => {
+                const { checkboxElements, highestExecutedRung } = sellOnlyState;
+                if (!Array.isArray(checkboxElements)) {
+                    return;
+                }
+                checkboxElements.forEach(checkbox => {
+                    const rung = Number(checkbox.dataset.rung);
+                    if (!Number.isFinite(rung)) {
+                        checkbox.checked = false;
+                        return;
+                    }
+                    checkbox.checked = Number.isFinite(highestExecutedRung) && highestExecutedRung !== null
+                        ? rung <= highestExecutedRung
+                        : false;
+                });
+            };
+
+            const setSellOnlyHighestExecutedRung = (rung) => {
+                if (Number.isFinite(rung) && rung > 0) {
+                    sellOnlyState.highestExecutedRung = rung;
+                } else {
+                    sellOnlyState.highestExecutedRung = null;
+                }
+                updateSellOnlyCheckboxDisplay();
+            };
+
+            const bindSellOnlyCheckboxEvents = () => {
+                sellOnlyState.checkboxElements = Array.from(document.querySelectorAll('.buy-rung-executed'));
+                if (sellOnlyState.checkboxElements.length === 0) {
+                    return;
+                }
+                sellOnlyState.checkboxElements.forEach(checkbox => {
+                    checkbox.removeEventListener('click', checkbox.__sellOnlyHandler);
+                    const handler = (event) => {
+                        event.preventDefault();
+                        const target = event.currentTarget;
+                        const rung = Number(target.dataset.rung);
+                        if (!Number.isFinite(rung)) {
+                            setSellOnlyHighestExecutedRung(null);
+                            calculatePlan();
+                            return;
+                        }
+                        const previousHighest = sellOnlyState.highestExecutedRung;
+                        let newHighest;
+                        if (Number.isFinite(previousHighest) && previousHighest === rung) {
+                            newHighest = rung > 1 ? rung - 1 : null;
+                        } else {
+                            newHighest = rung;
+                        }
+                        setSellOnlyHighestExecutedRung(newHighest);
+                        calculatePlan();
+                    };
+                    checkbox.__sellOnlyHandler = handler;
+                    checkbox.addEventListener('click', handler);
+                });
+                updateSellOnlyCheckboxDisplay();
+            };
+
+            const applyDerivedSellOnlyInputs = (derivedTotals) => {
+                if (!existingQuantityInput || !existingAvgPriceInput) {
+                    return;
+                }
+                if (!derivedTotals || derivedTotals.quantity <= 0 || derivedTotals.avgPrice <= 0) {
+                    return;
+                }
+                existingQuantityInput.value = derivedTotals.quantity;
+                existingAvgPriceInput.value = derivedTotals.avgPrice;
+            };
 
             const buildSkewWeights = (count, skewValue) => {
                 if (count <= 0) {
@@ -840,10 +947,13 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 const rawFeeValue = advancedEnabled && feeValueInput ? parseFloat(feeValueInput.value) : 0;
                 const feeValue = Number.isFinite(rawFeeValue) ? Math.max(rawFeeValue, 0) : 0;
                 const sellOnlyMode = advancedEnabled && sellOnlyCheckbox ? sellOnlyCheckbox.checked : false;
-                const existingQuantity = sellOnlyMode && existingQuantityInput ? parseFloat(existingQuantityInput.value) : 0;
-                const existingAvgBuyPrice = sellOnlyMode && existingAvgPriceInput ? parseFloat(existingAvgPriceInput.value) : 0;
+                const existingQuantityRaw = sellOnlyMode && existingQuantityInput ? parseFloat(existingQuantityInput.value) : 0;
+                const existingAvgBuyPriceRaw = sellOnlyMode && existingAvgPriceInput ? parseFloat(existingAvgPriceInput.value) : 0;
+                const existingQuantity = Number.isFinite(existingQuantityRaw) ? existingQuantityRaw : 0;
+                const existingAvgBuyPrice = Number.isFinite(existingAvgBuyPriceRaw) ? existingAvgBuyPriceRaw : 0;
                 const spacingMode = advancedEnabled && spacingModeSelect ? spacingModeSelect.value : 'absolute';
                 const isRelativeSpacing = spacingMode === 'relative';
+                const selectedHighestExecutedRung = sellOnlyMode ? sellOnlyState.highestExecutedRung : null;
 
                 const validations = [
                     {
@@ -884,15 +994,15 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     },
                     {
                         id: 'existing_quantity',
-                        enabled: sellOnlyMode,
-                        isValid: Number.isFinite(existingQuantity) && existingQuantity > 0,
-                        message: 'Provide the quantity you already hold.'
+                        enabled: sellOnlyMode && !(Number.isFinite(selectedHighestExecutedRung) && selectedHighestExecutedRung !== null),
+                        isValid: Number.isFinite(existingQuantity) && existingQuantity >= 0,
+                        message: 'Provide the quantity you already hold or select executed rungs.'
                     },
                     {
                         id: 'existing_avg_price',
-                        enabled: sellOnlyMode,
-                        isValid: Number.isFinite(existingAvgBuyPrice) && existingAvgBuyPrice > 0,
-                        message: 'Provide the known average buy price for held assets.'
+                        enabled: sellOnlyMode && !(Number.isFinite(selectedHighestExecutedRung) && selectedHighestExecutedRung !== null),
+                        isValid: Number.isFinite(existingAvgBuyPrice) && existingAvgBuyPrice >= 0,
+                        message: 'Provide the known average buy price for held assets or select executed rungs.'
                     }
                 ];
 
@@ -992,101 +1102,122 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 let totalNetCapitalSpent = 0;
                 let totalBuyFees = 0;
 
-                if (!sellOnlyMode) {
-                    if (useEqualQuantity) {
-                        const activeBuyEntries = buyPrices
-                            .map((price, idx) => ({ price, idx }))
-                            .filter(entry => entry.price > 0);
-                        const activeCount = activeBuyEntries.length;
-                        const activeIndexSet = new Set(activeBuyEntries.map(entry => entry.idx));
-                        const totalPriceSum = activeBuyEntries.reduce((sum, entry) => sum + entry.price, 0);
-                        let sharedQuantity = 0;
-                        if (activeCount > 0 && Number.isFinite(C) && C > 0 && totalPriceSum > 0) {
-                            if (!feeEnabled || !isFeeNetted) {
-                                sharedQuantity = C / totalPriceSum;
-                            } else if (feeType === 'percent') {
-                                const denominator = totalPriceSum * (1 + feeRate);
-                                sharedQuantity = denominator > 0 ? C / denominator : 0;
+                if (useEqualQuantity) {
+                    const activeBuyEntries = buyPrices
+                        .map((price, idx) => ({ price, idx }))
+                        .filter(entry => entry.price > 0);
+                    const activeCount = activeBuyEntries.length;
+                    const activeIndexSet = new Set(activeBuyEntries.map(entry => entry.idx));
+                    const totalPriceSum = activeBuyEntries.reduce((sum, entry) => sum + entry.price, 0);
+                    let sharedQuantity = 0;
+                    if (activeCount > 0 && Number.isFinite(C) && C > 0 && totalPriceSum > 0) {
+                        if (!feeEnabled || !isFeeNetted) {
+                            sharedQuantity = C / totalPriceSum;
+                        } else if (feeType === 'percent') {
+                            const denominator = totalPriceSum * (1 + feeRate);
+                            sharedQuantity = denominator > 0 ? C / denominator : 0;
+                        } else {
+                            const effectiveBudget = C - (activeCount * feeValue);
+                            sharedQuantity = effectiveBudget > 0 ? effectiveBudget / totalPriceSum : 0;
+                        }
+                    }
+                    sharedQuantity = Math.max(sharedQuantity, 0);
+
+                    buyLadder = buyPrices.map((price, i) => {
+                        const hasVolume = sharedQuantity > 0 && activeIndexSet.has(i);
+                        const assetSize = hasVolume ? sharedQuantity : 0;
+                        const netCapital = assetSize * price;
+                        let fee = 0;
+                        if (assetSize > 0 && feeEnabled) {
+                            if (feeType === 'percent') {
+                                fee = netCapital * feeRate;
                             } else {
-                                const effectiveBudget = C - (activeCount * feeValue);
-                                sharedQuantity = effectiveBudget > 0 ? effectiveBudget / totalPriceSum : 0;
+                                fee = feeValue;
                             }
                         }
-                        sharedQuantity = Math.max(sharedQuantity, 0);
-
-                        buyLadder = buyPrices.map((price, i) => {
-                            const hasVolume = sharedQuantity > 0 && activeIndexSet.has(i);
-                            const assetSize = hasVolume ? sharedQuantity : 0;
-                            const netCapital = assetSize * price;
-                            let fee = 0;
-                            if (assetSize > 0 && feeEnabled) {
-                                if (feeType === 'percent') {
-                                    fee = netCapital * feeRate;
-                                } else {
-                                    fee = feeValue;
-                                }
-                            }
-                            if (assetSize === 0) {
-                                fee = 0;
-                            }
-                            const grossAllocation = isFeeNetted ? netCapital + fee : netCapital;
-                            totalAssetBought += assetSize;
-                            totalNetCapitalSpent += netCapital;
-                            totalBuyFees += fee;
-                            return {
-                                rung: i + 1,
-                                price,
-                                capital: grossAllocation,
-                                netCapital,
-                                allocation: 0,
-                                assetSize,
-                                fee
-                            };
-                        });
-                    } else {
-                        const capitalAllocations = (C > 0 && totalWeight > 0)
-                            ? rawWeights.map(w => (C * w) / totalWeight)
-                            : Array(N).fill(0);
-                        buyLadder = capitalAllocations.map((allocation, i) => {
-                            const price = buyPrices[i];
-                            const { net: netCapital, fee, gross } = deriveBuyAmounts(allocation);
-                            const assetSize = price > 0 && netCapital > 0 ? netCapital / price : 0;
-                            totalAssetBought += assetSize;
-                            totalNetCapitalSpent += netCapital;
-                            totalBuyFees += fee;
-                            return {
-                                rung: i + 1,
-                                price,
-                                capital: gross,
-                                netCapital,
-                                allocation: 0,
-                                assetSize,
-                                fee
-                            };
-                        });
-                    }
-
-                    let cumulativeNetCapital = 0;
-                    let cumulativeAsset = 0;
-                    const grossAllocationTotal = buyLadder.reduce((sum, rung) => sum + rung.capital, 0);
-                    const totalAssetForAllocation = totalAssetBought;
-                    buyLadder = buyLadder.map(rung => {
-                        cumulativeNetCapital += rung.netCapital;
-                        cumulativeAsset += rung.assetSize;
-                        const progressiveAvgPrice = cumulativeAsset > 0 ? (cumulativeNetCapital / cumulativeAsset) : 0;
+                        if (assetSize === 0) {
+                            fee = 0;
+                        }
+                        const grossAllocation = isFeeNetted ? netCapital + fee : netCapital;
+                        totalAssetBought += assetSize;
+                        totalNetCapitalSpent += netCapital;
+                        totalBuyFees += fee;
                         return {
-                            ...rung,
-                            allocation: totalAssetForAllocation > 0 ? (rung.assetSize / totalAssetForAllocation) * 100 : 0,
-                            progressiveAvgPrice
+                            rung: i + 1,
+                            price,
+                            capital: grossAllocation,
+                            netCapital,
+                            allocation: 0,
+                            assetSize,
+                            fee
                         };
                     });
                 } else {
-                    totalAssetBought = existingQuantity;
-                    totalNetCapitalSpent = existingQuantity * existingAvgBuyPrice;
+                    const capitalAllocations = (C > 0 && totalWeight > 0)
+                        ? rawWeights.map(w => (C * w) / totalWeight)
+                        : Array(N).fill(0);
+                    buyLadder = capitalAllocations.map((allocation, i) => {
+                        const price = buyPrices[i];
+                        const { net: netCapital, fee, gross } = deriveBuyAmounts(allocation);
+                        const assetSize = price > 0 && netCapital > 0 ? netCapital / price : 0;
+                        totalAssetBought += assetSize;
+                        totalNetCapitalSpent += netCapital;
+                        totalBuyFees += fee;
+                        return {
+                            rung: i + 1,
+                            price,
+                            capital: gross,
+                            netCapital,
+                            allocation: 0,
+                            assetSize,
+                            fee
+                        };
+                    });
                 }
 
-                const avgBuyPrice = totalAssetBought > 0
-                    ? (sellOnlyMode ? existingAvgBuyPrice : totalNetCapitalSpent / totalAssetBought)
+                let cumulativeNetCapital = 0;
+                let cumulativeAsset = 0;
+                const totalAssetForAllocation = totalAssetBought;
+                buyLadder = buyLadder.map(rung => {
+                    cumulativeNetCapital += rung.netCapital;
+                    cumulativeAsset += rung.assetSize;
+                    const progressiveAvgPrice = cumulativeAsset > 0 ? (cumulativeNetCapital / cumulativeAsset) : 0;
+                    return {
+                        ...rung,
+                        allocation: totalAssetForAllocation > 0 ? (rung.assetSize / totalAssetForAllocation) * 100 : 0,
+                        progressiveAvgPrice
+                    };
+                });
+
+                let effectiveAssetBought = totalAssetBought;
+                let effectiveNetCapitalSpent = totalNetCapitalSpent;
+                let effectiveBuyFees = totalBuyFees;
+
+                let derivedTotals = null;
+                if (sellOnlyMode) {
+                    if (Number.isFinite(selectedHighestExecutedRung) && selectedHighestExecutedRung !== null) {
+                        derivedTotals = deriveExecutedBuyTotals(buyLadder, selectedHighestExecutedRung);
+                        if (derivedTotals.quantity > 0 && derivedTotals.avgPrice > 0) {
+                            effectiveAssetBought = derivedTotals.quantity;
+                            effectiveNetCapitalSpent = derivedTotals.netCapital;
+                            effectiveBuyFees = derivedTotals.fees;
+                            applyDerivedSellOnlyInputs(derivedTotals);
+                        } else {
+                            derivedTotals = null;
+                        }
+                    }
+
+                    if (!derivedTotals) {
+                        effectiveAssetBought = existingQuantity > 0 ? existingQuantity : 0;
+                        effectiveNetCapitalSpent = existingQuantity > 0 && existingAvgBuyPrice > 0
+                            ? existingQuantity * existingAvgBuyPrice
+                            : 0;
+                        effectiveBuyFees = 0;
+                    }
+                }
+
+                const avgBuyPrice = effectiveAssetBought > 0
+                    ? (sellOnlyMode ? (effectiveNetCapitalSpent / effectiveAssetBought) : (totalNetCapitalSpent / totalAssetBought))
                     : 0;
 
                 // 5. Determine quantities available for sells
@@ -1094,7 +1225,7 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 let assetAllocations = [];
 
                 if (sellOnlyMode) {
-                    totalQuantityForSell = totalAssetBought;
+                    totalQuantityForSell = effectiveAssetBought;
                     if (useEqualQuantity) {
                         const equalDistribution = computeEqualGrossAllocations(totalQuantityForSell, sellPrices);
                         assetAllocations = equalDistribution.allocations;
@@ -1161,8 +1292,8 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 });
 
                 const avgSellPrice = totalQuantityForSell > 0 ? (totalRevenueNet / totalQuantityForSell) : 0;
-                const totalFees = totalBuyFees + totalSellFees;
-                const costBasis = sellOnlyMode ? totalNetCapitalSpent : totalNetCapitalSpent + totalBuyFees;
+                const totalFees = (sellOnlyMode ? effectiveBuyFees : totalBuyFees) + totalSellFees;
+                const costBasis = sellOnlyMode ? effectiveNetCapitalSpent : totalNetCapitalSpent + totalBuyFees;
                 const netProfitAfterFees = totalRevenueNet - costBasis - (isFeeNetted ? 0 : totalSellFees);
                 const roi = costBasis > 0 ? (netProfitAfterFees / costBasis) * 100 : 0;
 
@@ -1198,7 +1329,7 @@ caption { font-weight: 600; margin-bottom: 6px; }
                         costBasis,
                         totalRevenueGross,
                         totalRevenueNet,
-                        totalBuyFees,
+                        totalBuyFees: sellOnlyMode ? effectiveBuyFees : totalBuyFees,
                         totalSellFees,
                         lowestBuyPrice: lowestBuyActive ? lowestBuyActive.price : 0,
                         lowestBuyRung: lowestBuyActive ? lowestBuyActive.rung : null,
@@ -1211,6 +1342,12 @@ caption { font-weight: 600; margin-bottom: 6px; }
                         advancedEnabled,
                         sellOnly: sellOnlyMode,
                         equalQuantity: useEqualQuantity
+                    },
+                    selection: {
+                        highestExecutedBuyRung: sellOnlyMode && Number.isFinite(selectedHighestExecutedRung)
+                            ? selectedHighestExecutedRung
+                            : null,
+                        derivedTotals: sellOnlyMode && derivedTotals ? derivedTotals : null
                     },
                     feeSettings: {
                         enabled: feeEnabled,
@@ -1237,8 +1374,11 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     ? (plan.feeSettings.type === 'percent' ? 'Fee ($)' : 'Fee (%)')
                     : '';
 
+                const showExecutionCheckboxes = plan.modes && plan.modes.sellOnly;
+
                 if (buyHeaderRow) {
                     const buyHeaders = [
+                        ...(showExecutionCheckboxes ? ['Executed'] : []),
                         '#',
                         'Price',
                         'Vol',
@@ -1248,14 +1388,20 @@ caption { font-weight: 600; margin-bottom: 6px; }
                         'Avg Buy Price'
                     ];
                     buyHeaderRow.innerHTML = buyHeaders.map((label, idx) => {
-                        const classes = [
-                            'px-2',
-                            'py-2',
-                            idx === 0 ? 'w-12 text-center' : '',
-                            idx === 0 ? 'rounded-l-lg' : '',
-                            idx === buyHeaders.length - 1 ? 'rounded-r-lg' : ''
-                        ].filter(Boolean).join(' ');
-                        return `<th scope="col" class="${classes}">${label}</th>`;
+                        const classes = ['px-2', 'py-2'];
+                        if (showExecutionCheckboxes) {
+                            if (idx === 0) {
+                                classes.push('w-16', 'text-center', 'rounded-l-lg');
+                            } else if (idx === 1) {
+                                classes.push('w-12', 'text-center');
+                            }
+                        } else if (idx === 0) {
+                            classes.push('w-12', 'text-center', 'rounded-l-lg');
+                        }
+                        if (idx === buyHeaders.length - 1) {
+                            classes.push('rounded-r-lg');
+                        }
+                        return `<th scope="col" class="${classes.join(' ')}">${label}</th>`;
                     }).join('');
                 }
 
@@ -1296,7 +1442,7 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 if (buyChartCard && buyOrdersCard) {
                     if (plan.modes && plan.modes.sellOnly) {
                         buyChartCard.classList.add('hidden');
-                        buyOrdersCard.classList.add('hidden');
+                        buyOrdersCard.classList.remove('hidden');
                     } else {
                         buyChartCard.classList.remove('hidden');
                         buyOrdersCard.classList.remove('hidden');
@@ -1309,9 +1455,18 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 buyBody.innerHTML = '';
                 sellBody.innerHTML = '';
 
+                const highestExecuted = plan.selection && Number.isFinite(plan.selection.highestExecutedBuyRung)
+                    ? plan.selection.highestExecutedBuyRung
+                    : null;
+
                 plan.buyLadder.forEach((rung, i) => {
                     const rowClass = i % 2 === 0 ? 'table-row-even' : 'table-row-odd';
                     const cells = [
+                        ...(showExecutionCheckboxes ? [`<td class="px-2 py-2 text-center">
+                            <input type="checkbox"
+                                   class="form-checkbox buy-rung-executed h-4 w-4 text-primary-dark rounded focus:ring-0"
+                                   data-rung="${rung.rung}">
+                        </td>`] : []),
                         `<td class="px-2 py-2 font-medium text-center">${rung.rung}</td>`,
                         `<td class="px-2 py-2">${formatCurrency(rung.price)}</td>`,
                         `<td class="px-2 py-2">${formatNumber(rung.assetSize)}</td>`,
@@ -1325,7 +1480,10 @@ caption { font-weight: 600; margin-bottom: 6px; }
                         cells.push(`<td class="px-2 py-2">${feeCellValue}</td>`);
                     }
                     cells.push(`<td class="px-2 py-2">${formatCurrency(rung.progressiveAvgPrice)}</td>`);
-                    buyBody.innerHTML += `<tr class="${rowClass}">${cells.join('')}</tr>`;
+                    const executedClass = Number.isFinite(highestExecuted) && highestExecuted !== null && rung.rung <= highestExecuted
+                        ? ' executed-rung'
+                        : '';
+                    buyBody.innerHTML += `<tr class="${rowClass}${executedClass}">${cells.join('')}</tr>`;
                 });
 
                 plan.sellLadder.forEach((rung, i) => {
@@ -1347,6 +1505,12 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     cells.push(`<td class="px-2 py-2">${formatCurrency(rung.netProfit)}</td>`);
                     sellBody.innerHTML += `<tr class="${rowClass}">${cells.join('')}</tr>`;
                 });
+
+                if (showExecutionCheckboxes) {
+                    bindSellOnlyCheckboxEvents();
+                } else {
+                    sellOnlyState.checkboxElements = [];
+                }
 
                 // Draw charts
                 const combinedVolumes = [...plan.buyLadder, ...plan.sellLadder]
@@ -1651,6 +1815,8 @@ caption { font-weight: 600; margin-bottom: 6px; }
                         sellOnlyInputs?.classList.remove('hidden');
                     } else {
                         sellOnlyInputs?.classList.add('hidden');
+                        setSellOnlyHighestExecutedRung(null);
+                        sellOnlyState.checkboxElements = [];
                     }
                     calculatePlan();
                 });
