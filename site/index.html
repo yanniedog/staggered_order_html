@@ -60,6 +60,39 @@
         .table-row-even {
             background-color: #f8fafa;
         }
+        .label-invalid {
+            color: #b91c1c !important;
+        }
+        .input-invalid {
+            border-color: #b91c1c !important;
+            box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+        .label-with-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .label-with-info .info-button {
+            margin-left: auto;
+        }
+        .info-button {
+            background-color: transparent;
+            border: 1px solid #b91c1c;
+            color: #b91c1c;
+            border-radius: 9999px;
+            width: 18px;
+            height: 18px;
+            font-size: 0.75rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .info-button:hover,
+        .info-button:focus {
+            background-color: rgba(185, 28, 28, 0.1);
+        }
         /* Custom slider styles */
         input[type=range] {
             -webkit-appearance: none;
@@ -135,6 +168,14 @@
             opacity: 0;
             transition: opacity 0.2s;
         }
+        @media (max-width: 640px) {
+            .mobile-two-col {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+            .summary-mobile-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+        }
     </style>
 </head>
 <body class="p-2 sm:p-4">
@@ -149,17 +190,17 @@
             <p class="text-secondary-dark mt-2 text-md sm:text-lg text-center sm:text-left">Design your buy and sell ladders with precision.</p>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 auto-rows-min">
+        <main class="grid mobile-two-col grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 auto-rows-min">
             <div class="card p-6 sticky top-4">
                 <h2 class="text-2xl font-semibold text-primary-dark mb-6">Configuration</h2>
                 <form id="trading-plan-form" class="space-y-5">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label for="starting_capital" class="block text-sm font-medium text-secondary-dark mb-1">Starting Value ($)</label>
+                            <label for="starting_capital" class="block text-sm font-medium text-secondary-dark mb-1">Initial Capital ($)</label>
                             <input type="number" id="starting_capital" value="50000" class="form-input w-full rounded-md p-2">
                         </div>
                         <div>
-                            <label for="current_price" class="block text-sm font-medium text-secondary-dark mb-1">Current Price ($)</label>
+                            <label for="current_price" class="block text-sm font-medium text-secondary-dark mb-1">Current Asset Price ($)</label>
                             <input type="number" id="current_price" value="100" class="form-input w-full rounded-md p-2">
                         </div>
                     </div>
@@ -172,12 +213,49 @@
                         <input type="range" id="depth" value="20" min="1" max="99" step="1" class="w-full h-2 rounded-lg cursor-pointer">
                     </div>
                     <div>
-                        <label for="skew_value" class="block text-sm font-medium text-secondary-dark mb-1">Value Distribution (<span id="skew_value_display">50</span>)</label>
+                        <label for="skew_value" class="block text-sm font-medium text-secondary-dark mb-1">Allocation Skew (<span id="skew_value_display">50</span>)</label>
                         <input type="range" id="skew_value" min="0" max="100" value="50" class="w-full h-2 rounded-lg cursor-pointer">
                         <div class="flex justify-between text-xs text-tertiary-dark mt-1">
-                            <span>Shallow</span>
-                            <span>Linear</span>
-                            <span>Deep</span>
+                            <span>None</span>
+                            <span>Moderate</span>
+                            <span>Heavy</span>
+                        </div>
+                    </div>
+                    <div class="border border-[#dbf6fa] rounded-lg p-3 bg-[#f8fafa] space-y-3">
+                        <label class="flex items-center space-x-2 text-xs font-medium text-secondary-dark">
+                            <input id="advanced_mode" type="checkbox" class="form-checkbox h-3.5 w-3.5 text-primary-dark rounded focus:ring-0">
+                            <span>Advanced mode</span>
+                        </label>
+                        <div id="advanced-settings" class="space-y-3 hidden">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                                <div>
+                                    <label for="fee_type" class="block text-xs font-medium text-secondary-dark mb-1">Trading Fee Type</label>
+                                    <select id="fee_type" class="form-input w-full rounded-md p-2 text-sm">
+                                        <option value="percent">Percent (%)</option>
+                                        <option value="fixed">Flat ($)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="fee_value" class="block text-xs font-medium text-secondary-dark mb-1">Trading Fee</label>
+                                    <input type="number" id="fee_value" value="0" min="0" class="form-input w-full rounded-md p-2 text-sm" step="0.0001">
+                                </div>
+                                <div>
+                                    <label class="flex items-center space-x-2 text-xs font-medium text-secondary-dark mb-1">
+                                        <input id="sell_only_mode" type="checkbox" class="form-checkbox h-3.5 w-3.5 text-primary-dark rounded focus:ring-0">
+                                        <span>Sell-only ladder</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="sell-only-inputs" class="grid grid-cols-1 sm:grid-cols-2 gap-3 hidden">
+                                <div>
+                                    <label for="existing_quantity" class="block text-xs font-medium text-secondary-dark mb-1">Existing Quantity</label>
+                                    <input type="number" id="existing_quantity" value="0" min="0" class="form-input w-full rounded-md p-2 text-sm" step="0.0001">
+                                </div>
+                                <div>
+                                    <label for="existing_avg_price" class="block text-xs font-medium text-secondary-dark mb-1">Known Average Buy Price ($)</label>
+                                    <input type="number" id="existing_avg_price" value="0" min="0" class="form-input w-full rounded-md p-2 text-sm" step="0.0001">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <!-- Removed Generate Plan button -->
@@ -188,32 +266,40 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-semibold text-primary-dark">Plan Summary</h2>
                 </div>
-                <div id="summary" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                <div id="summary" class="grid summary-mobile-grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 text-center">
                     <div class="summary-card p-4 rounded-lg">
                         <p class="text-sm text-secondary-dark">Avg. Buy Price</p>
                         <p id="summary-avg-buy" class="text-xl font-bold text-primary-dark">-</p>
                     </div>
                     <div class="summary-card p-4 rounded-lg">
-                        <p class="text-sm text-secondary-dark">Avg. Sell Price</p>
+                        <p class="text-sm text-secondary-dark">Avg. Sell Price (Net)</p>
                         <p id="summary-avg-sell" class="text-xl font-bold text-primary-dark">-</p>
                     </div>
                     <div class="summary-card p-4 rounded-lg">
-                        <p class="text-sm text-secondary-dark">Total Profit</p>
-                        <p id="summary-total-profit" class="text-xl font-bold text-primary-dark">-</p>
+                        <p class="text-sm text-secondary-dark">Gross Profit</p>
+                        <p id="summary-gross-profit" class="text-xl font-bold text-primary-dark">-</p>
                     </div>
                     <div class="summary-card p-4 rounded-lg">
-                        <p class="text-sm text-secondary-dark">Total Asset</p>
-                        <p id="summary-total-asset" class="text-xl font-bold text-primary-dark">-</p>
+                        <p class="text-sm text-secondary-dark">Net Profit</p>
+                        <p id="summary-net-profit" class="text-xl font-bold text-primary-dark">-</p>
                     </div>
                     <div class="summary-card p-4 rounded-lg">
-                        <p class="text-sm text-secondary-dark">Actual ROI</p>
+                        <p class="text-sm text-secondary-dark">Total Fees Paid</p>
+                        <p id="summary-total-fees" class="text-xl font-bold text-primary-dark">-</p>
+                    </div>
+                    <div class="summary-card p-4 rounded-lg">
+                        <p class="text-sm text-secondary-dark">Total Vol</p>
+                        <p id="summary-total-quantity" class="text-xl font-bold text-primary-dark">-</p>
+                    </div>
+                    <div class="summary-card p-4 rounded-lg">
+                        <p class="text-sm text-secondary-dark">ROI on Cost Basis</p>
                         <p id="summary-roi" class="text-xl font-bold text-primary-dark">-</p>
                     </div>
                 </div>
             </div>
 
             <!-- Buy Chart -->
-            <div class="card p-6">
+            <div class="card p-6" id="buy-chart-card">
                 <h3 class="text-xl font-semibold text-primary-dark mb-4">Buy Ladder</h3>
                 <div id="visualization" class="d3-chart">
                     <svg id="allocation-chart"></svg>
@@ -221,43 +307,44 @@
             </div>
             
             <!-- Sell Chart -->
-            <div class="card p-6">
+            <div class="card p-6" id="sell-chart-card">
                 <h3 class="text-xl font-semibold text-primary-dark mb-4">Sell Ladder</h3>
                 <div id="sell-visualization" class="d3-chart">
                     <svg id="sell-allocation-chart"></svg>
                 </div>
             </div>
 
-            <div class="card p-6">
+            <div class="card p-6" id="buy-orders-card">
                 <h3 class="text-xl font-semibold text-primary-dark mb-4">Buy Orders</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-primary-dark uppercase table-header">
-                            <tr>
-                                <th scope="col" class="px-4 py-3 rounded-l-lg">Rung</th>
-                                <th scope="col" class="px-4 py-3">Price</th>
-                                <th scope="col" class="px-4 py-3">Quantity</th>
-                                <th scope="col" class="px-4 py-3">Allocation</th>
-                                <th scope="col" class="px-4 py-3">Value</th>
-                                <th scope="col" class="px-4 py-3 rounded-r-lg">Progressive Avg. Price</th>
+                            <tr id="buy-table-header-row">
+                                <th scope="col" class="px-2 py-2 rounded-l-lg">#</th>
+                                <th scope="col" class="px-2 py-2">Price</th>
+                                <th scope="col" class="px-2 py-2">Vol</th>
+                                <th scope="col" class="px-2 py-2">Alloc</th>
+                                <th scope="col" class="px-2 py-2">Value</th>
+                                <th scope="col" class="px-2 py-2 rounded-r-lg">Avg Buy Price</th>
                             </tr>
                         </thead>
                         <tbody id="buy-ladder-body"></tbody>
                     </table>
                 </div>
             </div>
-            <div class="card p-6">
+            <div class="card p-6" id="sell-orders-card">
                 <h3 class="text-xl font-semibold text-primary-dark mb-4">Sell Orders</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-primary-dark uppercase table-header">
-                            <tr>
-                                <th scope="col" class="px-4 py-3 rounded-l-lg">Rung</th>
-                                <th scope="col" class="px-4 py-3">Price</th>
-                                <th scope="col" class="px-4 py-3">Quantity</th>
-                                <th scope="col" class="px-4 py-3">Allocation</th>
-                                <th scope="col" class="px-4 py-3">Value</th>
-                                <th scope="col" class="px-4 py-3 rounded-r-lg">Profit</th>
+                            <tr id="sell-table-header-row">
+                                <th scope="col" class="px-2 py-2 rounded-l-lg">#</th>
+                                <th scope="col" class="px-2 py-2">Price</th>
+                                <th scope="col" class="px-2 py-2">Vol</th>
+                                <th scope="col" class="px-2 py-2">Alloc</th>
+                                <th scope="col" class="px-2 py-2">Value</th>
+                                <th scope="col" class="px-2 py-2">Avg Sell Price</th>
+                                <th scope="col" class="px-2 py-2 rounded-r-lg">Profit</th>
                             </tr>
                         </thead>
                         <tbody id="sell-ladder-body"></tbody>
@@ -280,52 +367,66 @@
             const depthSlider = document.getElementById('depth');
             const rungDisplay = document.getElementById('number_of_rungs_display');
             const depthDisplay = document.getElementById('depth_display');
+            const advancedToggle = document.getElementById('advanced_mode');
+            const advancedSettings = document.getElementById('advanced-settings');
+            const feeTypeSelect = document.getElementById('fee_type');
+            const feeValueInput = document.getElementById('fee_value');
+            const sellOnlyCheckbox = document.getElementById('sell_only_mode');
+            const sellOnlyInputs = document.getElementById('sell-only-inputs');
+            const existingQuantityInput = document.getElementById('existing_quantity');
+            const existingAvgPriceInput = document.getElementById('existing_avg_price');
+            const buyChartCard = document.getElementById('buy-chart-card');
+            const buyOrdersCard = document.getElementById('buy-orders-card');
+            const buyHeaderRow = document.getElementById('buy-table-header-row');
+            const sellHeaderRow = document.getElementById('sell-table-header-row');
 
-            const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-            const formatPercent = (value) => `${value.toFixed(2)}%`;
-            const formatNumber = (value, digits = 4) => value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: digits });
+            const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number.isFinite(value) ? value : 0);
+            const formatPercent = (value) => Number.isFinite(value) ? `${value.toFixed(2)}%` : '0.00%';
+            const formatNumber = (value, digits = 4) => Number.isFinite(value) ? value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: digits }) : '0';
 
-            // Custom alert box
-            function showModalAlert(message) {
-                // Check if an alert already exists
-                if (document.getElementById('custom-alert')) {
+            function setFieldValidity(fieldId, isValid, message = '') {
+                const input = document.getElementById(fieldId);
+                if (input) {
+                    if (isValid) {
+                        input.classList.remove('input-invalid');
+                        input.removeAttribute('aria-invalid');
+                    } else {
+                        input.classList.add('input-invalid');
+                        input.setAttribute('aria-invalid', 'true');
+                    }
+                }
+
+                const label = document.querySelector(`label[for="${fieldId}"]`);
+                if (!label) return;
+
+                if (isValid) {
+                    label.classList.remove('label-invalid', 'label-with-info');
+                    const infoBtn = label.querySelector('.info-button');
+                    if (infoBtn) {
+                        infoBtn.remove();
+                    }
                     return;
                 }
 
-                let alertOverlay = document.createElement('div');
-                alertOverlay.id = 'custom-alert-overlay';
-                alertOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4';
-                
-                let alertBox = document.createElement('div');
-                alertBox.id = 'custom-alert';
-                alertBox.className = 'bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-50';
-                
-                let alertTitle = document.createElement('h3');
-                alertTitle.className = 'text-lg font-medium text-gray-900 mb-4';
-                alertTitle.textContent = 'Invalid Input';
-                
-                let alertMessage = document.createElement('p');
-                alertMessage.className = 'text-sm text-gray-600 mb-6';
-                alertMessage.textContent = message;
-                
-                let alertButton = document.createElement('button');
-                alertButton.id = 'custom-alert-close';
-                alertButton.className = 'w-full px-4 py-2 btn-primary rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
-                alertButton.textContent = 'OK';
-                
-                alertButton.onclick = function() {
-                    document.body.removeChild(alertOverlay);
-                };
-                
-                alertBox.appendChild(alertTitle);
-                alertBox.appendChild(alertMessage);
-                alertBox.appendChild(alertButton);
-                alertOverlay.appendChild(alertBox);
-                document.body.appendChild(alertOverlay);
+                label.classList.add('label-invalid', 'label-with-info');
 
-                alertButton.focus();
+                let infoBtn = label.querySelector('.info-button');
+                if (!infoBtn) {
+                    infoBtn = document.createElement('button');
+                    infoBtn.type = 'button';
+                    infoBtn.className = 'info-button';
+                    infoBtn.textContent = 'i';
+                    label.appendChild(infoBtn);
+                }
+
+                if (message) {
+                    infoBtn.setAttribute('title', message);
+                    infoBtn.setAttribute('aria-label', message);
+                } else {
+                    infoBtn.removeAttribute('title');
+                    infoBtn.setAttribute('aria-label', 'Additional information');
+                }
             }
-
 
             function calculatePlan() {
                 // 1. Get inputs
@@ -335,133 +436,262 @@
                 const currentPrice = parseFloat(document.getElementById('current_price').value);
                 const depth = parseFloat(document.getElementById('depth').value);
 
-                if ([C, N, S, currentPrice, depth].some(isNaN)) {
-                    // Don't show alert on load if fields are empty, only if they are invalid
-                     if (document.activeElement && document.activeElement.closest('form')) {
-                         showModalAlert("Please ensure all inputs are valid numbers.");
-                     }
+                const advancedEnabled = advancedToggle ? advancedToggle.checked : false;
+                const feeType = advancedEnabled && feeTypeSelect ? feeTypeSelect.value : 'percent';
+                const rawFeeValue = advancedEnabled && feeValueInput ? parseFloat(feeValueInput.value) : 0;
+                const feeValue = Number.isFinite(rawFeeValue) ? Math.max(rawFeeValue, 0) : 0;
+                const sellOnlyMode = advancedEnabled && sellOnlyCheckbox ? sellOnlyCheckbox.checked : false;
+                const existingQuantity = sellOnlyMode && existingQuantityInput ? parseFloat(existingQuantityInput.value) : 0;
+                const existingAvgBuyPrice = sellOnlyMode && existingAvgPriceInput ? parseFloat(existingAvgPriceInput.value) : 0;
+
+                const validations = [
+                    {
+                        id: 'starting_capital',
+                        enabled: !sellOnlyMode,
+                        isValid: Number.isFinite(C) && C > 0,
+                        message: 'Enter initial capital greater than zero.'
+                    },
+                    {
+                        id: 'number_of_rungs',
+                        enabled: true,
+                        isValid: Number.isFinite(N) && N >= 2,
+                        message: 'Rungs must be at least 2.'
+                    },
+                    {
+                        id: 'skew_value',
+                        enabled: true,
+                        isValid: Number.isFinite(S) && S >= 0 && S <= 100,
+                        message: 'Allocation skew must be between 0 and 100.'
+                    },
+                    {
+                        id: 'current_price',
+                        enabled: true,
+                        isValid: Number.isFinite(currentPrice) && currentPrice > 0,
+                        message: 'Enter a current asset price greater than zero.'
+                    },
+                    {
+                        id: 'depth',
+                        enabled: true,
+                        isValid: Number.isFinite(depth) && depth > 0,
+                        message: 'Width must be greater than zero.'
+                    },
+                    {
+                        id: 'fee_value',
+                        enabled: advancedEnabled && !!feeValueInput,
+                        isValid: Number.isFinite(feeValue) && feeValue >= 0,
+                        message: 'Trading fee must be zero or greater.'
+                    },
+                    {
+                        id: 'existing_quantity',
+                        enabled: sellOnlyMode,
+                        isValid: Number.isFinite(existingQuantity) && existingQuantity > 0,
+                        message: 'Provide the quantity you already hold.'
+                    },
+                    {
+                        id: 'existing_avg_price',
+                        enabled: sellOnlyMode,
+                        isValid: Number.isFinite(existingAvgBuyPrice) && existingAvgBuyPrice > 0,
+                        message: 'Provide the known average buy price for held assets.'
+                    }
+                ];
+
+                let hasInvalidInput = false;
+                validations.forEach(({ id, enabled, isValid, message }) => {
+                    if (!enabled) {
+                        setFieldValidity(id, true);
+                        return;
+                    }
+                    if (!isValid) {
+                        setFieldValidity(id, false, message);
+                        hasInvalidInput = true;
+                    } else {
+                        setFieldValidity(id, true);
+                    }
+                });
+
+                if (hasInvalidInput) {
+                    currentPlanData = null;
                     return;
                 }
-                
-                if (depth <= 0) {
-                    // showModalAlert("Width must be a positive percentage.");
-                    return; // Fail silently on real-time update
-                }
-                if (currentPrice <= 0) {
-                    // showModalAlert("Current Price must be positive.");
-                    return; // Fail silently on real-time update
-                }
-                if (N < 2) {
-                    //  showModalAlert("Number of rungs must be at least 2.");
-                    return; // Fail silently on real-time update
-                }
+
+                const feeEnabled = feeValue > 0 && advancedEnabled;
+                const feeRate = feeType === 'percent' ? feeValue / 100 : 0;
+
+                const deriveBuyAmounts = (grossAmount) => {
+                    if (!feeEnabled) {
+                        return { net: grossAmount, fee: 0 };
+                    }
+                    if (feeType === 'percent') {
+                        const net = grossAmount / (1 + feeRate);
+                        const fee = Math.max(grossAmount - net, 0);
+                        return { net, fee };
+                    }
+                    const fee = Math.min(feeValue, grossAmount);
+                    const net = Math.max(grossAmount - fee, 0);
+                    return { net, fee };
+                };
+
+                const deriveSellFee = (grossRevenue) => {
+                    if (!feeEnabled) {
+                        return 0;
+                    }
+                    if (feeType === 'percent') {
+                        return grossRevenue * feeRate;
+                    }
+                    return Math.min(feeValue, grossRevenue);
+                };
 
                 // 2. Calculate Skew Weights
-                // SkewParam > 1 for Back-load (S > 50), < 1 for Front-load (S < 50)
                 const skewParam = Math.pow(10, (S - 50) / 50);
-                let rawWeights;
-                if (S === 0) {
-                    rawWeights = Array(N).fill(1);
-                } else {
-                    rawWeights = Array.from({ length: N }, (_, i) => Math.pow(i + 1, skewParam));
-                }
+                const rawWeights = S === 0
+                    ? Array(N).fill(1)
+                    : Array.from({ length: N }, (_, i) => Math.pow(i + 1, skewParam));
                 const totalWeight = rawWeights.reduce((sum, w) => sum + w, 0);
-                
-                // 3. Calculate Capital Allocation (Buy Side)
-                // More capital at later rungs (lower prices) if back-loaded
-                const capitalAllocations = rawWeights.map(w => C * (w / totalWeight));
 
-                // 4. Calculate Price Points
+                // 3. Calculate Price Points
                 const depthVal = depth / 100;
-                
                 const buyPriceEnd = currentPrice * (1 - depthVal);
                 const sellPriceEnd = currentPrice * (1 + depthVal);
-
-                // NEW LOGIC for spacing
-                // The total price range for buys is from currentPrice down to buyPriceEnd
                 const buyRange = currentPrice - buyPriceEnd;
-                // Divide this range into N equal steps (intervals)
-                const buyPriceStep = N > 0 ? buyRange / N : 0; 
-                
-                // The total price range for sells is from currentPrice up to sellPriceEnd
                 const sellRange = sellPriceEnd - currentPrice;
-                // Divide this range into N equal steps
+                const buyPriceStep = N > 0 ? buyRange / N : 0;
                 const sellPriceStep = N > 0 ? sellRange / N : 0;
 
-                // 5. Calculate Buy Ladder
-                let buyLadder = capitalAllocations.map((capital, i) => {
-                    // Rung 1 (i=0) is at currentPrice - (1 * step)
-                    // Rung N (i=N-1) is at currentPrice - (N * step) == buyPriceEnd
-                    const price = currentPrice - ((i + 1) * buyPriceStep); 
-                    const assetSize = price > 0 ? capital / price : 0;
-                    return {
-                        rung: i + 1,
-                        price,
-                        capital,
-                        allocation: (capital / C) * 100,
-                        assetSize
-                    };
-                });
+                // 4. Calculate Buy Ladder
+                let buyLadder = [];
+                let totalAssetBought = 0;
+                let totalNetCapitalSpent = 0;
+                let totalBuyFees = 0;
 
-                let cumulativeCapital = 0;
-                let cumulativeAsset = 0;
-                buyLadder = buyLadder.map(rung => {
-                    cumulativeCapital += rung.capital;
-                    cumulativeAsset += rung.assetSize;
-                    const progressiveAvgPrice = cumulativeAsset > 0 ? cumulativeCapital / cumulativeAsset : 0;
-                    return {
-                        ...rung,
-                        progressiveAvgPrice
-                    };
-                });
+                if (!sellOnlyMode) {
+                    const capitalAllocations = rawWeights.map(w => C * (w / totalWeight));
+                    buyLadder = capitalAllocations.map((grossAllocation, i) => {
+                        const price = currentPrice - ((i + 1) * buyPriceStep);
+                        const { net: netCapital, fee } = deriveBuyAmounts(grossAllocation);
+                        const assetSize = price > 0 ? netCapital / price : 0;
+                        totalAssetBought += assetSize;
+                        totalNetCapitalSpent += netCapital;
+                        totalBuyFees += fee;
+                        return {
+                            rung: i + 1,
+                            price,
+                            capital: grossAllocation,
+                            netCapital,
+                            allocation: C > 0 ? (grossAllocation / C) * 100 : 0,
+                            assetSize,
+                            fee
+                        };
+                    });
 
-                // 6. Calculate Average Entry & Total Asset
-                const totalAssetBought = buyLadder.reduce((sum, rung) => sum + rung.assetSize, 0);
-                const avgBuyPrice = totalAssetBought > 0 ? C / totalAssetBought : 0;
+                    let cumulativeNetCapital = 0;
+                    let cumulativeAsset = 0;
+                    buyLadder = buyLadder.map(rung => {
+                        cumulativeNetCapital += rung.netCapital;
+                        cumulativeAsset += rung.assetSize;
+                        const progressiveAvgPrice = cumulativeAsset > 0 ? (cumulativeNetCapital / cumulativeAsset) : 0;
+                        return {
+                            ...rung,
+                            progressiveAvgPrice
+                        };
+                    });
+                } else {
+                    totalAssetBought = existingQuantity;
+                    totalNetCapitalSpent = existingQuantity * existingAvgBuyPrice;
+                }
 
-                // 7. Calculate Sell Ladder
-                // Symmetrical asset allocation: more assets sold at later rungs (higher prices) if back-loaded
-                const assetAllocations = rawWeights.map(w => totalAssetBought * (w / totalWeight));
+                const avgBuyPrice = totalAssetBought > 0
+                    ? (sellOnlyMode ? existingAvgBuyPrice : totalNetCapitalSpent / totalAssetBought)
+                    : 0;
+
+                const totalQuantityForSell = totalAssetBought;
+
+                // 5. Calculate Sell Ladder
+                const assetAllocations = totalWeight > 0
+                    ? rawWeights.map(w => totalQuantityForSell * (w / totalWeight))
+                    : Array(N).fill(0);
+
+                let totalRevenueGross = 0;
+                let totalRevenueNet = 0;
+                let totalSellFees = 0;
+                let totalGrossProfit = 0;
+                let totalNetProfit = 0;
 
                 let sellLadder = assetAllocations.map((assetSize, i) => {
-                    // Rung 1 (i=0) is at currentPrice + (1 * step)
-                    // Rung N (i=N-1) is at currentPrice + (N * step) == sellPriceEnd
                     const price = currentPrice + ((i + 1) * sellPriceStep);
-                    const profit = (price - avgBuyPrice) * assetSize;
-                    const capital = assetSize * price;
+                    const grossRevenue = assetSize * price;
+                    const sellFee = deriveSellFee(grossRevenue);
+                    const netRevenue = Math.max(grossRevenue - sellFee, 0);
+                    const grossProfit = grossRevenue - (assetSize * avgBuyPrice);
+                    const netProfit = netRevenue - (assetSize * avgBuyPrice);
+
+                    totalRevenueGross += grossRevenue;
+                    totalRevenueNet += netRevenue;
+                    totalSellFees += sellFee;
+                    totalGrossProfit += grossProfit;
+                    totalNetProfit += netProfit;
+
                     return {
                         rung: i + 1,
                         price,
-                        assetSize: assetSize,
-                        profit,
-                        capital,
-                        allocation: 0 // Will calculate this next
+                        assetSize,
+                        capital: grossRevenue,
+                        allocation: 0,
+                        fee: sellFee,
+                        netRevenue,
+                        grossProfit,
+                        netProfit
                     };
                 });
 
-                // 8. Calculate Sell Ladder Allocations
-                const totalSellCapital = sellLadder.reduce((sum, r) => sum + r.capital, 0);
-                const avgSellPrice = totalAssetBought > 0 ? totalSellCapital / totalAssetBought : 0;
                 sellLadder.forEach(rung => {
-                    rung.allocation = totalSellCapital > 0 ? (rung.capital / totalSellCapital) * 100 : 0;
+                    rung.allocation = totalRevenueGross > 0 ? (rung.capital / totalRevenueGross) * 100 : 0;
                 });
 
-                // 9. Final Summary
-                const totalProfit = sellLadder.reduce((sum, rung) => sum + rung.profit, 0);
-                const actualROI = C > 0 ? (totalProfit / C) * 100 : 0;
+                let cumulativeNetRevenue = 0;
+                let cumulativeAssetSold = 0;
+                sellLadder = sellLadder.map(rung => {
+                    cumulativeNetRevenue += rung.netRevenue;
+                    cumulativeAssetSold += rung.assetSize;
+                    const progressiveAvgSellPrice = cumulativeAssetSold > 0 ? (cumulativeNetRevenue / cumulativeAssetSold) : 0;
+                    return {
+                        ...rung,
+                        progressiveAvgSellPrice
+                    };
+                });
+
+                const avgSellPrice = totalQuantityForSell > 0 ? (totalRevenueNet / totalQuantityForSell) : 0;
+                const totalFees = totalBuyFees + totalSellFees;
+                const costBasis = sellOnlyMode ? totalNetCapitalSpent : totalNetCapitalSpent + totalBuyFees;
+                const roi = costBasis > 0 ? (totalNetProfit / costBasis) * 100 : 0;
 
                 const plan = {
-                    summary: { 
-                        avgBuyPrice: avgBuyPrice,
-                        avgSellPrice: avgSellPrice,
-                        totalProfit, 
-                        totalAssetBought, 
-                        actualROI 
+                    summary: {
+                        avgBuyPrice,
+                        avgSellPrice,
+                        grossProfit: totalGrossProfit,
+                        netProfit: totalNetProfit,
+                        totalFees,
+                        totalQuantity: totalQuantityForSell,
+                        roi,
+                        costBasis,
+                        totalRevenueGross,
+                        totalRevenueNet,
+                        totalBuyFees,
+                        totalSellFees
                     },
                     buyLadder,
-                    sellLadder
+                    sellLadder,
+                    modes: {
+                        advancedEnabled,
+                        sellOnly: sellOnlyMode
+                    },
+                    feeSettings: {
+                        enabled: feeEnabled,
+                        type: feeType,
+                        value: feeValue
+                    }
                 };
-                
+
                 updateUI(plan);
             }
 
@@ -469,12 +699,76 @@
                 // Store data for CSV export
                 currentPlanData = plan;
 
-                // Update summary cards
-                document.getElementById('summary-avg-buy').textContent = formatCurrency(plan.summary.avgBuyPrice);
-                document.getElementById('summary-avg-sell').textContent = formatCurrency(plan.summary.avgSellPrice);
-                document.getElementById('summary-total-profit').textContent = formatCurrency(plan.summary.totalProfit);
-                document.getElementById('summary-total-asset').textContent = formatNumber(plan.summary.totalAssetBought);
-                document.getElementById('summary-roi').textContent = formatPercent(plan.summary.actualROI);
+                const summary = plan.summary;
+                const showFeeColumns = !!(plan.feeSettings && plan.feeSettings.enabled);
+
+                const feeHeaderLabel = showFeeColumns
+                    ? (plan.feeSettings.type === 'percent' ? 'Fee ($)' : 'Fee (%)')
+                    : '';
+
+                if (buyHeaderRow) {
+                    const buyHeaders = [
+                        '#',
+                        'Price',
+                        'Vol',
+                        'Alloc',
+                        'Value',
+                        ...(showFeeColumns ? [feeHeaderLabel] : []),
+                        'Avg Buy Price'
+                    ];
+                    buyHeaderRow.innerHTML = buyHeaders.map((label, idx) => {
+                        const classes = [
+                            'px-2',
+                            'py-2',
+                            idx === 0 ? 'w-12 text-center' : '',
+                            idx === 0 ? 'rounded-l-lg' : '',
+                            idx === buyHeaders.length - 1 ? 'rounded-r-lg' : ''
+                        ].filter(Boolean).join(' ');
+                        return `<th scope="col" class="${classes}">${label}</th>`;
+                    }).join('');
+                }
+
+                if (sellHeaderRow) {
+                    const sellHeaders = [
+                        '#',
+                        'Price',
+                        'Vol',
+                        'Alloc',
+                        'Value',
+                        ...(showFeeColumns ? [feeHeaderLabel] : []),
+                        'Avg Sell Price',
+                        'Profit'
+                    ];
+                    sellHeaderRow.innerHTML = sellHeaders.map((label, idx) => {
+                        const classes = [
+                            'px-2',
+                            'py-2',
+                            idx === 0 ? 'w-12 text-center' : '',
+                            idx === 0 ? 'rounded-l-lg' : '',
+                            idx === sellHeaders.length - 1 ? 'rounded-r-lg' : ''
+                        ].filter(Boolean).join(' ');
+                        return `<th scope="col" class="${classes}">${label}</th>`;
+                    }).join('');
+                }
+
+                document.getElementById('summary-avg-buy').textContent = formatCurrency(summary.avgBuyPrice);
+                document.getElementById('summary-avg-sell').textContent = formatCurrency(summary.avgSellPrice);
+                document.getElementById('summary-gross-profit').textContent = formatCurrency(summary.grossProfit);
+                document.getElementById('summary-net-profit').textContent = formatCurrency(summary.netProfit);
+                document.getElementById('summary-total-fees').textContent = formatCurrency(summary.totalFees);
+                document.getElementById('summary-total-quantity').textContent = formatNumber(summary.totalQuantity, 4);
+                document.getElementById('summary-roi').textContent = formatPercent(summary.roi);
+
+                // Toggle visibility for buy components in sell-only mode
+                if (buyChartCard && buyOrdersCard) {
+                    if (plan.modes && plan.modes.sellOnly) {
+                        buyChartCard.classList.add('hidden');
+                        buyOrdersCard.classList.add('hidden');
+                    } else {
+                        buyChartCard.classList.remove('hidden');
+                        buyOrdersCard.classList.remove('hidden');
+                    }
+                }
 
                 // Update tables
                 const buyBody = document.getElementById('buy-ladder-body');
@@ -484,32 +778,49 @@
 
                 plan.buyLadder.forEach((rung, i) => {
                     const rowClass = i % 2 === 0 ? 'table-row-even' : 'table-row-odd';
-                    buyBody.innerHTML += `
-                        <tr class="${rowClass}">
-                            <td class="px-4 py-2 font-medium">${rung.rung}</td>
-                            <td class="px-4 py-2">${formatCurrency(rung.price)}</td>
-                            <td class="px-4 py-2">${formatNumber(rung.assetSize)}</td>
-                            <td class="px-4 py-2">${formatPercent(rung.allocation)}</td>
-                            <td class="px-4 py-2">${formatCurrency(rung.capital)}</td>
-                            <td class="px-4 py-2">${formatCurrency(rung.progressiveAvgPrice)}</td>
-                        </tr>`;
+                    const cells = [
+                        `<td class="px-2 py-2 font-medium text-center">${rung.rung}</td>`,
+                        `<td class="px-2 py-2">${formatCurrency(rung.price)}</td>`,
+                        `<td class="px-2 py-2">${formatNumber(rung.assetSize)}</td>`,
+                        `<td class="px-2 py-2">${formatPercent(rung.allocation)}</td>`,
+                        `<td class="px-2 py-2">${formatCurrency(rung.capital)}</td>`
+                    ];
+                    if (showFeeColumns) {
+                        const feeCellValue = plan.feeSettings.type === 'percent'
+                            ? formatCurrency(rung.fee)
+                            : formatPercent(rung.capital > 0 ? (rung.fee / rung.capital) * 100 : 0);
+                        cells.push(`<td class="px-2 py-2">${feeCellValue}</td>`);
+                    }
+                    cells.push(`<td class="px-2 py-2">${formatCurrency(rung.progressiveAvgPrice)}</td>`);
+                    buyBody.innerHTML += `<tr class="${rowClass}">${cells.join('')}</tr>`;
                 });
 
                 plan.sellLadder.forEach((rung, i) => {
                     const rowClass = i % 2 === 0 ? 'table-row-even' : 'table-row-odd';
-                    sellBody.innerHTML += `
-                        <tr class="${rowClass}">
-                            <td class="px-4 py-2 font-medium">${rung.rung}</td>
-                            <td class="px-4 py-2">${formatCurrency(rung.price)}</td>
-                            <td class="px-4 py-2">${formatNumber(rung.assetSize)}</td>
-                            <td class="px-4 py-2">${formatPercent(rung.allocation)}</td>
-                            <td class="px-4 py-2">${formatCurrency(rung.capital)}</td>
-                            <td class="px-4 py-2">${formatCurrency(rung.profit)}</td>
-                        </tr>`;
+                    const cells = [
+                        `<td class="px-2 py-2 font-medium text-center">${rung.rung}</td>`,
+                        `<td class="px-2 py-2">${formatCurrency(rung.price)}</td>`,
+                        `<td class="px-2 py-2">${formatNumber(rung.assetSize)}</td>`,
+                        `<td class="px-2 py-2">${formatPercent(rung.allocation)}</td>`,
+                        `<td class="px-2 py-2">${formatCurrency(rung.capital)}</td>`
+                    ];
+                    if (showFeeColumns) {
+                        const feeCellValue = plan.feeSettings.type === 'percent'
+                            ? formatCurrency(rung.fee)
+                            : formatPercent(rung.capital > 0 ? (rung.fee / rung.capital) * 100 : 0);
+                        cells.push(`<td class="px-2 py-2">${feeCellValue}</td>`);
+                    }
+                    cells.push(`<td class="px-2 py-2">${formatCurrency(rung.progressiveAvgSellPrice)}</td>`);
+                    cells.push(`<td class="px-2 py-2">${formatCurrency(rung.netProfit)}</td>`);
+                    sellBody.innerHTML += `<tr class="${rowClass}">${cells.join('')}</tr>`;
                 });
-                
-                // Draw both charts
-                drawBuyChart(plan.buyLadder);
+
+                // Draw charts
+                if (plan.buyLadder.length > 0 && !(plan.modes && plan.modes.sellOnly)) {
+                    drawBuyChart(plan.buyLadder);
+                } else {
+                    d3.select("#allocation-chart").selectAll("*").remove();
+                }
                 drawSellChart(plan.sellLadder);
             }
             
@@ -518,6 +829,9 @@
                 if (container.node() === null) return; 
 
                 d3.select("#allocation-chart").selectAll("*").remove();
+                if (!data || data.length === 0) {
+                    return;
+                }
 
                 const margin = { top: 20, right: 20, bottom: 70, left: 60 }; // Increased bottom margin
                 let width;
@@ -558,20 +872,20 @@
                     .style("fill", "#2f3b58")
                     .style("font-size", "12px");
 
-                const yMax = d3.max(data, d => d.capital);
+                const yMax = d3.max(data, d => d.assetSize);
                 const y = d3.scaleLinear()
                     .domain([0, yMax > 0 ? yMax : 1]) 
                     .range([height, 0]);
 
                 svg.append("g")
-                    .call(d3.axisLeft(y).ticks(5).tickFormat(d => `$${d3.format(".2s")(d).replace(/G/, "B")}`));
+                    .call(d3.axisLeft(y).ticks(5).tickFormat(d => formatNumber(d, 2)));
 
                 svg.append("text")
                     .attr("text-anchor", "end")
                     .attr("transform", "rotate(-90)")
                     .attr("y", -margin.left + 20)
                     .attr("x", -height / 2 + 20)
-                    .text("Value ($)")
+                    .text("Vol")
                     .style("fill", "#2f3b58")
                     .style("font-size", "12px");
 
@@ -591,7 +905,7 @@
                         d3.select(this).style("opacity", 0.7);
                     })
                     .on("mousemove", function(event, d) {
-                        tooltip.html(`Rung ${d.rung}<br>Price: ${formatCurrency(d.price)}<br>Value: ${formatCurrency(d.capital)}<br>Allocation: ${formatPercent(d.allocation)}`)
+                        tooltip.html(`Rung ${d.rung}<br>Price: ${formatCurrency(d.price)}<br>Vol: ${formatNumber(d.assetSize, 4)}<br>Value (incl. fee): ${formatCurrency(d.capital)}<br>Alloc: ${formatPercent(d.allocation)}`)
                             .style("left", (event.pageX + 15) + "px")
                             .style("top", (event.pageY - 28) + "px");
                     })
@@ -603,8 +917,8 @@
                 svg.selectAll("rect.buy-bar")
                     .transition()
                     .duration(800)
-                    .attr("y", d => y(d.capital))
-                    .attr("height", d => height - y(d.capital))
+                    .attr("y", d => y(d.assetSize))
+                    .attr("height", d => height - y(d.assetSize))
                     .delay((d, i) => i * 20);
             }
 
@@ -613,6 +927,9 @@
                 if (container.node() === null) return; 
 
                 d3.select("#sell-allocation-chart").selectAll("*").remove();
+                if (!data || data.length === 0) {
+                    return;
+                }
 
                 const margin = { top: 20, right: 20, bottom: 70, left: 60 }; // Increased bottom margin
                 let width;
@@ -659,14 +976,14 @@
                     .range([height, 0]);
 
                 svg.append("g")
-                    .call(d3.axisLeft(y).ticks(5).tickFormat(d => `${d3.format(".2s")(d).replace(/G/, "B")}`));
+                    .call(d3.axisLeft(y).ticks(5).tickFormat(d => formatNumber(d, 2)));
 
                 svg.append("text")
                     .attr("text-anchor", "end")
                     .attr("transform", "rotate(-90)")
                     .attr("y", -margin.left + 20)
                     .attr("x", -height / 2 + 20)
-                    .text("Quantity")
+                    .text("Vol")
                     .style("fill", "#2f3b58")
                     .style("font-size", "12px");
 
@@ -686,7 +1003,7 @@
                         d3.select(this).style("opacity", 0.7);
                     })
                     .on("mousemove", function(event, d) {
-                        tooltip.html(`Rung ${d.rung}<br>Price: ${formatCurrency(d.price)}<br>Quantity: ${formatNumber(d.assetSize)}<br>Value: ${formatCurrency(d.capital)}<br>Allocation: ${formatPercent(d.allocation)}`)
+                        tooltip.html(`Rung ${d.rung}<br>Price: ${formatCurrency(d.price)}<br>Vol: ${formatNumber(d.assetSize, 4)}<br>Gross Value: ${formatCurrency(d.capital)}<br>Net Revenue: ${formatCurrency(d.netRevenue)}<br>Net Profit: ${formatCurrency(d.netProfit)}<br>Alloc: ${formatPercent(d.allocation)}`)
                             .style("left", (event.pageX + 15) + "px")
                             .style("top", (event.pageY - 28) + "px");
                     })
@@ -752,12 +1069,69 @@
                 });
                 depthDisplay.textContent = depthSlider.value;
             }
+
+            if (advancedToggle) {
+                advancedToggle.addEventListener('change', () => {
+                    if (advancedToggle.checked) {
+                        advancedSettings?.classList.remove('hidden');
+                    } else {
+                        advancedSettings?.classList.add('hidden');
+                        if (sellOnlyCheckbox) {
+                            sellOnlyCheckbox.checked = false;
+                        }
+                        if (sellOnlyInputs) {
+                            sellOnlyInputs.classList.add('hidden');
+                        }
+                    }
+                    calculatePlan();
+                });
+                if (!advancedToggle.checked) {
+                    advancedSettings?.classList.add('hidden');
+                }
+            }
+
+            if (sellOnlyCheckbox) {
+                sellOnlyCheckbox.addEventListener('change', () => {
+                    if (sellOnlyCheckbox.checked) {
+                        sellOnlyInputs?.classList.remove('hidden');
+                    } else {
+                        sellOnlyInputs?.classList.add('hidden');
+                    }
+                    calculatePlan();
+                });
+                if (!sellOnlyCheckbox.checked) {
+                    sellOnlyInputs?.classList.add('hidden');
+                }
+            }
+
+            if (feeTypeSelect) {
+                feeTypeSelect.addEventListener('change', calculatePlan);
+            }
+
+            if (feeValueInput) {
+                feeValueInput.addEventListener('input', debouncedCalculate);
+            }
+
+            if (existingQuantityInput) {
+                existingQuantityInput.addEventListener('input', debouncedCalculate);
+            }
+
+            if (existingAvgPriceInput) {
+                existingAvgPriceInput.addEventListener('input', debouncedCalculate);
+            }
             
             // --- CSV Download ---
             const downloadBtn = document.getElementById('download-csv-btn');
             downloadBtn.addEventListener('click', () => {
                 if (!currentPlanData) {
-                    showModalAlert("No data to download. Adjust settings to generate a plan.");
+                    const firstInvalidLabel = document.querySelector('.label-invalid');
+                    if (firstInvalidLabel) {
+                        firstInvalidLabel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        const infoBtn = firstInvalidLabel.querySelector('.info-button');
+                        if (infoBtn) {
+                            infoBtn.focus({ preventScroll: true });
+                        }
+                    }
                     return;
                 }
 
@@ -770,7 +1144,11 @@
                     rungs: document.getElementById('number_of_rungs').value,
                     currentPrice: document.getElementById('current_price').value,
                     depth: document.getElementById('depth').value,
-                    skew: document.getElementById('skew_value').value
+                    skew: document.getElementById('skew_value').value,
+                    advancedMode: advancedToggle ? advancedToggle.checked : false,
+                    sellOnly: sellOnlyCheckbox ? sellOnlyCheckbox.checked : false,
+                    feeType: feeTypeSelect ? feeTypeSelect.value : '',
+                    feeValue: feeValueInput ? feeValueInput.value : ''
                 };
 
                 let csvContent = "";
@@ -778,47 +1156,99 @@
                 // Section 1: Settings
                 csvContent += "Setting,Value\r\n";
                 csvContent += `Date,"${settings.date}"\r\n`;
-                csvContent += `Starting Value,${settings.startingCapital}\r\n`;
+                csvContent += `Initial Capital,${settings.startingCapital}\r\n`;
                 csvContent += `Number of Rungs,${settings.rungs}\r\n`;
-                csvContent += `Current Price,${settings.currentPrice}\r\n`;
+                csvContent += `Current Asset Price,${settings.currentPrice}\r\n`;
                 csvContent += `Width (%),${settings.depth}\r\n`;
-                csvContent += `Skew,${settings.skew}\r\n`;
+                csvContent += `Allocation Skew,${settings.skew}\r\n`;
+                csvContent += `Advanced Mode Enabled,${settings.advancedMode ? 'Yes' : 'No'}\r\n`;
+                csvContent += `Sell-only Mode,${settings.sellOnly ? 'Yes' : 'No'}\r\n`;
+                if (settings.advancedMode) {
+                    csvContent += `Trading Fee Type,${settings.feeType}\r\n`;
+                    csvContent += `Trading Fee Value,${settings.feeValue}\r\n`;
+                }
                 csvContent += "\r\n";
 
                 // Section 2: Summary
                 csvContent += "Summary Metric,Value\r\n";
                 csvContent += `Avg. Buy Price,${plan.summary.avgBuyPrice}\r\n`;
-                csvContent += `Avg. Sell Price,${plan.summary.avgSellPrice}\r\n`;
-                csvContent += `Total Profit,${plan.summary.totalProfit}\r\n`;
-                csvContent += `Total Asset,${plan.summary.totalAssetBought}\r\n`;
-                csvContent += `Actual ROI (%),${plan.summary.actualROI}\r\n`;
+                csvContent += `Avg. Sell Price (Net),${plan.summary.avgSellPrice}\r\n`;
+                csvContent += `Gross Profit,${plan.summary.grossProfit}\r\n`;
+                csvContent += `Net Profit,${plan.summary.netProfit}\r\n`;
+                csvContent += `Total Fees Paid,${plan.summary.totalFees}\r\n`;
+                csvContent += `Total Vol,${plan.summary.totalQuantity}\r\n`;
+                csvContent += `Cost Basis,${plan.summary.costBasis}\r\n`;
+                csvContent += `ROI on Cost Basis (%),${plan.summary.roi}\r\n`;
+                if (plan.summary.totalBuyFees !== undefined) {
+                    csvContent += `Buy-side Fees,${plan.summary.totalBuyFees}\r\n`;
+                }
+                if (plan.summary.totalSellFees !== undefined) {
+                    csvContent += `Sell-side Fees,${plan.summary.totalSellFees}\r\n`;
+                }
                 csvContent += "\r\n";
 
                 // Section 3: Ladders
-                csvContent += "Buy Rung,Buy Price,Buy Quantity,Buy Allocation (%),Buy Value,Buy Progressive Avg Price,,Sell Rung,Sell Price,Sell Quantity,Sell Allocation (%),Sell Value,Sell Profit\r\n";
+                const csvShowFeeColumns = !!(plan.feeSettings && plan.feeSettings.enabled);
+                const feeHeaderCsv = csvShowFeeColumns
+                    ? (plan.feeSettings.type === 'percent' ? "Fee ($)" : "Fee (%)")
+                    : '';
+                const buyHeaderCsv = [
+                    "Buy Rung",
+                    "Buy Price",
+                    "Buy Vol",
+                    "Buy Alloc (%)",
+                    "Buy Value",
+                    ...(csvShowFeeColumns ? [`Buy ${feeHeaderCsv}`] : []),
+                    "Buy Avg Buy Price"
+                ];
+                const sellHeaderCsv = [
+                    "Sell Rung",
+                    "Sell Price",
+                    "Sell Vol",
+                    "Sell Alloc (%)",
+                    "Sell Value",
+                    ...(csvShowFeeColumns ? [`Sell ${feeHeaderCsv}`] : []),
+                    "Sell Avg Sell Price",
+                    "Sell Net Profit"
+                ];
+
+                csvContent += `${buyHeaderCsv.join(",")},,${sellHeaderCsv.join(",")}\r\n`;
                 
-                const numRungs = plan.buyLadder.length; // Assumes buy and sell have same length
+                const numRungs = Math.max(plan.buyLadder.length, plan.sellLadder.length);
                 for (let i = 0; i < numRungs; i++) {
                     const buyRung = plan.buyLadder[i];
                     const sellRung = plan.sellLadder[i];
-                    
-                    const buyRow = [
+
+                    const buyRowValues = buyRung ? [
                         buyRung.rung,
                         buyRung.price,
                         buyRung.assetSize,
                         buyRung.allocation,
                         buyRung.capital,
+                        ...(csvShowFeeColumns ? [
+                            plan.feeSettings.type === 'percent'
+                                ? buyRung.fee
+                                : (buyRung.capital > 0 ? (buyRung.fee / buyRung.capital) * 100 : 0)
+                        ] : []),
                         buyRung.progressiveAvgPrice
-                    ].join(',');
-                    
-                    const sellRow = [
+                    ] : [];
+                    const sellRowValues = sellRung ? [
                         sellRung.rung,
                         sellRung.price,
                         sellRung.assetSize,
                         sellRung.allocation,
                         sellRung.capital,
-                        sellRung.profit
-                    ].join(',');
+                        ...(csvShowFeeColumns ? [
+                            plan.feeSettings.type === 'percent'
+                                ? sellRung.fee
+                                : (sellRung.capital > 0 ? (sellRung.fee / sellRung.capital) * 100 : 0)
+                        ] : []),
+                        sellRung.progressiveAvgSellPrice,
+                        sellRung.netProfit
+                    ] : [];
+
+                    const buyRow = buyRowValues.length > 0 ? buyRowValues.join(',') : Array(buyHeaderCsv.length).fill('').join(',');
+                    const sellRow = sellRowValues.length > 0 ? sellRowValues.join(',') : Array(sellHeaderCsv.length).fill('').join(',');
 
                     csvContent += `${buyRow},,${sellRow}\r\n`;
                 }
