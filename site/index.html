@@ -99,6 +99,25 @@
         .info-button:focus {
             background-color: rgba(185, 28, 28, 0.1);
         }
+        .helper-tooltip {
+            background-color: transparent;
+            border: 1px solid #2f3b58;
+            color: #2f3b58;
+            border-radius: 9999px;
+            width: 18px;
+            height: 18px;
+            font-size: 0.75rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .helper-tooltip:hover,
+        .helper-tooltip:focus {
+            background-color: rgba(47, 59, 88, 0.1);
+        }
         /* Custom slider styles */
         input[type=range] {
             -webkit-appearance: none;
@@ -253,7 +272,20 @@
                             <span>Advanced mode</span>
                         </label>
                         <div id="advanced-settings" class="space-y-3 hidden">
-                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <div class="sm:col-span-4">
+                                    <div class="border-2 border-primary-dark bg-[#edf2ff] rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div>
+                                            <p class="text-xs font-semibold text-secondary-dark uppercase tracking-wide">Mode</p>
+                                            <p class="text-sm font-semibold text-primary-dark">Sell-only ladder</p>
+                                            <p class="text-[11px] text-secondary-dark mt-1">Preserve existing buy orders while fine-tuning the sell ladder.</p>
+                                        </div>
+                                        <label class="inline-flex items-center space-x-2 text-sm font-medium text-primary-dark">
+                                            <input id="sell_only_mode" type="checkbox" class="form-checkbox h-4 w-4 text-primary-dark rounded focus:ring-0">
+                                            <span>Enable</span>
+                                        </label>
+                                    </div>
+                                </div>
                                 <div>
                                     <label for="fee_type" class="block text-xs font-medium text-secondary-dark mb-1">Trading Fee Type</label>
                                     <select id="fee_type" class="form-input w-full rounded-md p-2 text-sm">
@@ -266,13 +298,10 @@
                                     <input type="number" id="fee_value" value="0" min="0" class="form-input w-full rounded-md p-2 text-sm" step="0.0001">
                                 </div>
                                 <div>
-                                    <label class="flex items-center space-x-2 text-xs font-medium text-secondary-dark mb-1">
-                                        <input id="sell_only_mode" type="checkbox" class="form-checkbox h-3.5 w-3.5 text-primary-dark rounded focus:ring-0">
-                                        <span>Sell-only ladder</span>
+                                    <label for="fee_settlement" class="flex items-center justify-between text-xs font-medium text-secondary-dark mb-1">
+                                        <span>Fee Settlement</span>
+                                        <button type="button" class="helper-tooltip" title="Choose whether trading fees reduce each order (net settlement) or are paid from a separate pool (external settlement)." aria-label="Fee settlement details">i</button>
                                     </label>
-                                </div>
-                                <div>
-                                    <label for="fee_settlement" class="block text-xs font-medium text-secondary-dark mb-1">Fee Settlement</label>
                                     <select id="fee_settlement" class="form-input w-full rounded-md p-2 text-sm">
                                         <option value="netted">Net settlement (deduct from order)</option>
                                         <option value="external">External settlement (separate funds)</option>
@@ -280,22 +309,23 @@
                                 </div>
                             </div>
                             <div>
-                                <label for="spacing_mode" class="block text-xs font-medium text-secondary-dark mb-1">Spacing Between Rungs</label>
+                                <label for="spacing_mode" class="flex items-center justify-between text-xs font-medium text-secondary-dark mb-1">
+                                    <span>Spacing Between Rungs</span>
+                                    <button type="button" class="helper-tooltip" title="Relative spacing compounds the rung width as a percent change, creating exponential steps." aria-label="Spacing mode information">i</button>
+                                </label>
                                 <select id="spacing_mode" class="form-input w-full rounded-md p-2 text-sm">
                                     <option value="absolute">Absolute (Equal Steps)</option>
                                     <option value="relative">Relative (% per rung)</option>
                                 </select>
-                                <p class="text-[11px] text-secondary-dark mt-1">Relative mode applies the width as a compounded percent change per rung.</p>
                             </div>
                             <div>
-                                <p class="text-[11px] text-secondary-dark">Net settlement reduces each order&apos;s proceeds by the fee. External settlement keeps order values intact and draws fees from a separate pool.</p>
-                            </div>
-                            <div>
-                                <label class="flex items-center space-x-2 text-xs font-medium text-secondary-dark mb-1">
-                                    <input id="equal_quantity_mode" type="checkbox" class="form-checkbox h-3.5 w-3.5 text-primary-dark rounded focus:ring-0">
-                                    <span>Equal quantity per rung</span>
+                                <label class="flex items-center justify-between text-xs font-medium text-secondary-dark mb-1">
+                                    <span class="flex items-center space-x-2">
+                                        <input id="equal_quantity_mode" type="checkbox" class="form-checkbox h-3.5 w-3.5 text-primary-dark rounded focus:ring-0">
+                                        <span>Equal quantity per rung</span>
+                                    </span>
+                                    <button type="button" class="helper-tooltip" title="Override skew settings and distribute the same asset size across each rung." aria-label="Equal quantity details">i</button>
                                 </label>
-                                <p class="text-[11px] text-secondary-dark mt-1">Distributes identical asset size across each rung and overrides skewed allocation.</p>
                             </div>
                             <div id="sell-only-inputs" class="grid grid-cols-1 sm:grid-cols-2 gap-3 hidden">
                                 <div>
@@ -410,10 +440,14 @@
         document.addEventListener('DOMContentLoaded', function () {
             // Store plan data for CSV export
             let currentPlanData = null;
+            let baselineBuySnapshot = null;
             const sellOnlyState = {
                 highestExecutedRung: null,
                 checkboxElements: []
             };
+            const cloneBuyLadder = (ladder) => Array.isArray(ladder)
+                ? ladder.map(rung => ({ ...rung }))
+                : [];
 
             const form = document.getElementById('trading-plan-form');
             const skewSlider = document.getElementById('skew_value');
@@ -536,11 +570,19 @@
                 updateSellOnlyCheckboxDisplay();
             };
 
-            const applyDerivedSellOnlyInputs = (derivedTotals) => {
+            const applyDerivedSellOnlyInputs = (derivedTotals, options = {}) => {
+                const { force = false } = options;
                 if (!existingQuantityInput || !existingAvgPriceInput) {
                     return;
                 }
                 if (!derivedTotals || derivedTotals.quantity <= 0 || derivedTotals.avgPrice <= 0) {
+                    return;
+                }
+                const currentQuantity = parseFloat(existingQuantityInput.value);
+                const currentAvgPrice = parseFloat(existingAvgPriceInput.value);
+                const quantityInUse = Number.isFinite(currentQuantity) && currentQuantity > 0;
+                const avgInUse = Number.isFinite(currentAvgPrice) && currentAvgPrice > 0;
+                if (!force && (quantityInUse || avgInUse)) {
                     return;
                 }
                 existingQuantityInput.value = derivedTotals.quantity;
@@ -1102,77 +1144,89 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 let totalNetCapitalSpent = 0;
                 let totalBuyFees = 0;
 
-                if (useEqualQuantity) {
-                    const activeBuyEntries = buyPrices
-                        .map((price, idx) => ({ price, idx }))
-                        .filter(entry => entry.price > 0);
-                    const activeCount = activeBuyEntries.length;
-                    const activeIndexSet = new Set(activeBuyEntries.map(entry => entry.idx));
-                    const totalPriceSum = activeBuyEntries.reduce((sum, entry) => sum + entry.price, 0);
-                    let sharedQuantity = 0;
-                    if (activeCount > 0 && Number.isFinite(C) && C > 0 && totalPriceSum > 0) {
-                        if (!feeEnabled || !isFeeNetted) {
-                            sharedQuantity = C / totalPriceSum;
-                        } else if (feeType === 'percent') {
-                            const denominator = totalPriceSum * (1 + feeRate);
-                            sharedQuantity = denominator > 0 ? C / denominator : 0;
-                        } else {
-                            const effectiveBudget = C - (activeCount * feeValue);
-                            sharedQuantity = effectiveBudget > 0 ? effectiveBudget / totalPriceSum : 0;
-                        }
-                    }
-                    sharedQuantity = Math.max(sharedQuantity, 0);
+                const canReuseBuySnapshot = sellOnlyMode
+                    && baselineBuySnapshot
+                    && Array.isArray(baselineBuySnapshot.buyLadder)
+                    && baselineBuySnapshot.buyLadder.length > 0;
 
-                    buyLadder = buyPrices.map((price, i) => {
-                        const hasVolume = sharedQuantity > 0 && activeIndexSet.has(i);
-                        const assetSize = hasVolume ? sharedQuantity : 0;
-                        const netCapital = assetSize * price;
-                        let fee = 0;
-                        if (assetSize > 0 && feeEnabled) {
-                            if (feeType === 'percent') {
-                                fee = netCapital * feeRate;
+                if (canReuseBuySnapshot) {
+                    buyLadder = cloneBuyLadder(baselineBuySnapshot.buyLadder);
+                    totalAssetBought = baselineBuySnapshot.totalAssetBought;
+                    totalNetCapitalSpent = baselineBuySnapshot.totalNetCapitalSpent;
+                    totalBuyFees = baselineBuySnapshot.totalBuyFees;
+                } else {
+                    if (useEqualQuantity) {
+                        const activeBuyEntries = buyPrices
+                            .map((price, idx) => ({ price, idx }))
+                            .filter(entry => entry.price > 0);
+                        const activeCount = activeBuyEntries.length;
+                        const activeIndexSet = new Set(activeBuyEntries.map(entry => entry.idx));
+                        const totalPriceSum = activeBuyEntries.reduce((sum, entry) => sum + entry.price, 0);
+                        let sharedQuantity = 0;
+                        if (activeCount > 0 && Number.isFinite(C) && C > 0 && totalPriceSum > 0) {
+                            if (!feeEnabled || !isFeeNetted) {
+                                sharedQuantity = C / totalPriceSum;
+                            } else if (feeType === 'percent') {
+                                const denominator = totalPriceSum * (1 + feeRate);
+                                sharedQuantity = denominator > 0 ? C / denominator : 0;
                             } else {
-                                fee = feeValue;
+                                const effectiveBudget = C - (activeCount * feeValue);
+                                sharedQuantity = effectiveBudget > 0 ? effectiveBudget / totalPriceSum : 0;
                             }
                         }
-                        if (assetSize === 0) {
-                            fee = 0;
-                        }
-                        const grossAllocation = isFeeNetted ? netCapital + fee : netCapital;
-                        totalAssetBought += assetSize;
-                        totalNetCapitalSpent += netCapital;
-                        totalBuyFees += fee;
-                        return {
-                            rung: i + 1,
-                            price,
-                            capital: grossAllocation,
-                            netCapital,
-                            allocation: 0,
-                            assetSize,
-                            fee
-                        };
-                    });
-                } else {
-                    const capitalAllocations = (C > 0 && totalWeight > 0)
-                        ? rawWeights.map(w => (C * w) / totalWeight)
-                        : Array(N).fill(0);
-                    buyLadder = capitalAllocations.map((allocation, i) => {
-                        const price = buyPrices[i];
-                        const { net: netCapital, fee, gross } = deriveBuyAmounts(allocation);
-                        const assetSize = price > 0 && netCapital > 0 ? netCapital / price : 0;
-                        totalAssetBought += assetSize;
-                        totalNetCapitalSpent += netCapital;
-                        totalBuyFees += fee;
-                        return {
-                            rung: i + 1,
-                            price,
-                            capital: gross,
-                            netCapital,
-                            allocation: 0,
-                            assetSize,
-                            fee
-                        };
-                    });
+                        sharedQuantity = Math.max(sharedQuantity, 0);
+
+                        buyLadder = buyPrices.map((price, i) => {
+                            const hasVolume = sharedQuantity > 0 && activeIndexSet.has(i);
+                            const assetSize = hasVolume ? sharedQuantity : 0;
+                            const netCapital = assetSize * price;
+                            let fee = 0;
+                            if (assetSize > 0 && feeEnabled) {
+                                if (feeType === 'percent') {
+                                    fee = netCapital * feeRate;
+                                } else {
+                                    fee = feeValue;
+                                }
+                            }
+                            if (assetSize === 0) {
+                                fee = 0;
+                            }
+                            const grossAllocation = isFeeNetted ? netCapital + fee : netCapital;
+                            totalAssetBought += assetSize;
+                            totalNetCapitalSpent += netCapital;
+                            totalBuyFees += fee;
+                            return {
+                                rung: i + 1,
+                                price,
+                                capital: grossAllocation,
+                                netCapital,
+                                allocation: 0,
+                                assetSize,
+                                fee
+                            };
+                        });
+                    } else {
+                        const capitalAllocations = (C > 0 && totalWeight > 0)
+                            ? rawWeights.map(w => (C * w) / totalWeight)
+                            : Array(N).fill(0);
+                        buyLadder = capitalAllocations.map((allocation, i) => {
+                            const price = buyPrices[i];
+                            const { net: netCapital, fee, gross } = deriveBuyAmounts(allocation);
+                            const assetSize = price > 0 && netCapital > 0 ? netCapital / price : 0;
+                            totalAssetBought += assetSize;
+                            totalNetCapitalSpent += netCapital;
+                            totalBuyFees += fee;
+                            return {
+                                rung: i + 1,
+                                price,
+                                capital: gross,
+                                netCapital,
+                                allocation: 0,
+                                assetSize,
+                                fee
+                            };
+                        });
+                    }
                 }
 
                 let cumulativeNetCapital = 0;
@@ -1201,9 +1255,30 @@ caption { font-weight: 600; margin-bottom: 6px; }
                             effectiveAssetBought = derivedTotals.quantity;
                             effectiveNetCapitalSpent = derivedTotals.netCapital;
                             effectiveBuyFees = derivedTotals.fees;
-                            applyDerivedSellOnlyInputs(derivedTotals);
+                            applyDerivedSellOnlyInputs(derivedTotals, { force: true });
                         } else {
                             derivedTotals = null;
+                        }
+                    }
+
+                    if (!derivedTotals && canReuseBuySnapshot) {
+                        const snapshotQuantity = baselineBuySnapshot.totalAssetBought;
+                        const snapshotNetCapital = baselineBuySnapshot.totalNetCapitalSpent;
+                        const snapshotFees = baselineBuySnapshot.totalBuyFees;
+                        const snapshotAvgPrice = snapshotQuantity > 0
+                            ? snapshotNetCapital / snapshotQuantity
+                            : 0;
+                        if (snapshotQuantity > 0 && snapshotAvgPrice > 0) {
+                            derivedTotals = {
+                                quantity: snapshotQuantity,
+                                netCapital: snapshotNetCapital,
+                                fees: snapshotFees,
+                                avgPrice: snapshotAvgPrice
+                            };
+                            effectiveAssetBought = snapshotQuantity;
+                            effectiveNetCapitalSpent = snapshotNetCapital;
+                            effectiveBuyFees = snapshotFees;
+                            applyDerivedSellOnlyInputs(derivedTotals);
                         }
                     }
 
@@ -1359,6 +1434,15 @@ caption { font-weight: 600; margin-bottom: 6px; }
                         mode: spacingMode
                     }
                 };
+
+                if (!sellOnlyMode && buyLadder.length > 0) {
+                    baselineBuySnapshot = {
+                        buyLadder: cloneBuyLadder(buyLadder),
+                        totalAssetBought,
+                        totalNetCapitalSpent,
+                        totalBuyFees
+                    };
+                }
 
                 updateUI(plan);
             }
