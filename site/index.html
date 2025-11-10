@@ -139,9 +139,14 @@
 </head>
 <body class="p-2 sm:p-4">
     <div id="app" class="max-w-7xl mx-auto">
-        <header class="text-center py-6">
-            <h1 class="text-3xl sm:text-4xl font-bold text-primary-dark">Trading Plan Calculator</h1>
-            <p class="text-secondary-dark mt-2 text-md sm:text-lg">Design your buy and sell ladders with precision.</p>
+        <header class="py-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-center sm:text-left">
+                <h1 class="text-3xl sm:text-4xl font-bold text-primary-dark">Trading Plan Calculator</h1>
+                <button id="download-csv-btn" class="btn-secondary text-sm font-medium py-2 px-4 rounded-lg self-center sm:self-auto">
+                    Download CSV
+                </button>
+            </div>
+            <p class="text-secondary-dark mt-2 text-md sm:text-lg text-center sm:text-left">Design your buy and sell ladders with precision.</p>
         </header>
 
         <main class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 auto-rows-min">
@@ -150,7 +155,7 @@
                 <form id="trading-plan-form" class="space-y-5">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label for="starting_capital" class="block text-sm font-medium text-secondary-dark mb-1">Starting Capital ($)</label>
+                            <label for="starting_capital" class="block text-sm font-medium text-secondary-dark mb-1">Starting Value ($)</label>
                             <input type="number" id="starting_capital" value="50000" class="form-input w-full rounded-md p-2">
                         </div>
                         <div>
@@ -163,16 +168,16 @@
                         <input type="range" id="number_of_rungs" value="10" min="2" max="50" step="1" class="w-full h-2 rounded-lg cursor-pointer">
                     </div>
                     <div>
-                        <label for="depth" class="block text-sm font-medium text-secondary-dark mb-1">Depth (<span id="depth_display">20</span>%)</label>
-                        <input type="range" id="depth" value="20" min="1" max="100" step="1" class="w-full h-2 rounded-lg cursor-pointer">
+                        <label for="depth" class="block text-sm font-medium text-secondary-dark mb-1">Width (<span id="depth_display">20</span>%)</label>
+                        <input type="range" id="depth" value="20" min="1" max="99" step="1" class="w-full h-2 rounded-lg cursor-pointer">
                     </div>
                     <div>
-                        <label for="skew_value" class="block text-sm font-medium text-secondary-dark mb-1">Capital/Asset Skew (<span id="skew_value_display">50</span>)</label>
+                        <label for="skew_value" class="block text-sm font-medium text-secondary-dark mb-1">Value Distribution (<span id="skew_value_display">50</span>)</label>
                         <input type="range" id="skew_value" min="0" max="100" value="50" class="w-full h-2 rounded-lg cursor-pointer">
                         <div class="flex justify-between text-xs text-tertiary-dark mt-1">
-                            <span>Front-load</span>
+                            <span>Shallow</span>
                             <span>Linear</span>
-                            <span>Back-load</span>
+                            <span>Deep</span>
                         </div>
                     </div>
                     <!-- Removed Generate Plan button -->
@@ -182,9 +187,6 @@
             <div class="card p-6">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-semibold text-primary-dark">Plan Summary</h2>
-                    <button id="download-csv-btn" class="btn-secondary text-sm font-medium py-2 px-4 rounded-lg">
-                        Download CSV
-                    </button>
                 </div>
                 <div id="summary" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                     <div class="summary-card p-4 rounded-lg">
@@ -212,7 +214,7 @@
 
             <!-- Buy Chart -->
             <div class="card p-6">
-                <h3 class="text-xl font-semibold text-primary-dark mb-4">Capital Allocation Across Buy Rungs</h3>
+                <h3 class="text-xl font-semibold text-primary-dark mb-4">Buy Ladder</h3>
                 <div id="visualization" class="d3-chart">
                     <svg id="allocation-chart"></svg>
                 </div>
@@ -220,23 +222,24 @@
             
             <!-- Sell Chart -->
             <div class="card p-6">
-                <h3 class="text-xl font-semibold text-primary-dark mb-4">Asset Allocation Across Sell Rungs</h3>
+                <h3 class="text-xl font-semibold text-primary-dark mb-4">Sell Ladder</h3>
                 <div id="sell-visualization" class="d3-chart">
                     <svg id="sell-allocation-chart"></svg>
                 </div>
             </div>
 
             <div class="card p-6">
-                <h3 class="text-xl font-semibold text-primary-dark mb-4">Buy Ladder</h3>
+                <h3 class="text-xl font-semibold text-primary-dark mb-4">Buy Orders</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-primary-dark uppercase table-header">
                             <tr>
                                 <th scope="col" class="px-4 py-3 rounded-l-lg">Rung</th>
                                 <th scope="col" class="px-4 py-3">Price</th>
-                                <th scope="col" class="px-4 py-3">Capital</th>
+                                <th scope="col" class="px-4 py-3">Quantity</th>
                                 <th scope="col" class="px-4 py-3">Allocation</th>
-                                <th scope="col" class="px-4 py-3 rounded-r-lg">Asset Size</th>
+                                <th scope="col" class="px-4 py-3">Value</th>
+                                <th scope="col" class="px-4 py-3 rounded-r-lg">Progressive Avg. Price</th>
                             </tr>
                         </thead>
                         <tbody id="buy-ladder-body"></tbody>
@@ -244,16 +247,16 @@
                 </div>
             </div>
             <div class="card p-6">
-                <h3 class="text-xl font-semibold text-primary-dark mb-4">Sell Ladder</h3>
+                <h3 class="text-xl font-semibold text-primary-dark mb-4">Sell Orders</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-primary-dark uppercase table-header">
                             <tr>
                                 <th scope="col" class="px-4 py-3 rounded-l-lg">Rung</th>
                                 <th scope="col" class="px-4 py-3">Price</th>
-                                <th scope="col" class="px-4 py-3">Capital</th>
+                                <th scope="col" class="px-4 py-3">Quantity</th>
                                 <th scope="col" class="px-4 py-3">Allocation</th>
-                                <th scope="col" class="px-4 py-3">Asset Size</th>
+                                <th scope="col" class="px-4 py-3">Value</th>
                                 <th scope="col" class="px-4 py-3 rounded-r-lg">Profit</th>
                             </tr>
                         </thead>
@@ -341,7 +344,7 @@
                 }
                 
                 if (depth <= 0) {
-                    // showModalAlert("Depth must be a positive percentage.");
+                    // showModalAlert("Width must be a positive percentage.");
                     return; // Fail silently on real-time update
                 }
                 if (currentPrice <= 0) {
@@ -356,7 +359,12 @@
                 // 2. Calculate Skew Weights
                 // SkewParam > 1 for Back-load (S > 50), < 1 for Front-load (S < 50)
                 const skewParam = Math.pow(10, (S - 50) / 50);
-                let rawWeights = Array.from({ length: N }, (_, i) => Math.pow(i + 1, skewParam));
+                let rawWeights;
+                if (S === 0) {
+                    rawWeights = Array(N).fill(1);
+                } else {
+                    rawWeights = Array.from({ length: N }, (_, i) => Math.pow(i + 1, skewParam));
+                }
                 const totalWeight = rawWeights.reduce((sum, w) => sum + w, 0);
                 
                 // 3. Calculate Capital Allocation (Buy Side)
@@ -381,7 +389,7 @@
                 const sellPriceStep = N > 0 ? sellRange / N : 0;
 
                 // 5. Calculate Buy Ladder
-                const buyLadder = capitalAllocations.map((capital, i) => {
+                let buyLadder = capitalAllocations.map((capital, i) => {
                     // Rung 1 (i=0) is at currentPrice - (1 * step)
                     // Rung N (i=N-1) is at currentPrice - (N * step) == buyPriceEnd
                     const price = currentPrice - ((i + 1) * buyPriceStep); 
@@ -392,6 +400,18 @@
                         capital,
                         allocation: (capital / C) * 100,
                         assetSize
+                    };
+                });
+
+                let cumulativeCapital = 0;
+                let cumulativeAsset = 0;
+                buyLadder = buyLadder.map(rung => {
+                    cumulativeCapital += rung.capital;
+                    cumulativeAsset += rung.assetSize;
+                    const progressiveAvgPrice = cumulativeAsset > 0 ? cumulativeCapital / cumulativeAsset : 0;
+                    return {
+                        ...rung,
+                        progressiveAvgPrice
                     };
                 });
 
@@ -468,9 +488,10 @@
                         <tr class="${rowClass}">
                             <td class="px-4 py-2 font-medium">${rung.rung}</td>
                             <td class="px-4 py-2">${formatCurrency(rung.price)}</td>
-                            <td class="px-4 py-2">${formatCurrency(rung.capital)}</td>
-                            <td class="px-4 py-2">${formatPercent(rung.allocation)}</td>
                             <td class="px-4 py-2">${formatNumber(rung.assetSize)}</td>
+                            <td class="px-4 py-2">${formatPercent(rung.allocation)}</td>
+                            <td class="px-4 py-2">${formatCurrency(rung.capital)}</td>
+                            <td class="px-4 py-2">${formatCurrency(rung.progressiveAvgPrice)}</td>
                         </tr>`;
                 });
 
@@ -480,9 +501,9 @@
                         <tr class="${rowClass}">
                             <td class="px-4 py-2 font-medium">${rung.rung}</td>
                             <td class="px-4 py-2">${formatCurrency(rung.price)}</td>
-                            <td class="px-4 py-2">${formatCurrency(rung.capital)}</td>
-                            <td class="px-4 py-2">${formatPercent(rung.allocation)}</td>
                             <td class="px-4 py-2">${formatNumber(rung.assetSize)}</td>
+                            <td class="px-4 py-2">${formatPercent(rung.allocation)}</td>
+                            <td class="px-4 py-2">${formatCurrency(rung.capital)}</td>
                             <td class="px-4 py-2">${formatCurrency(rung.profit)}</td>
                         </tr>`;
                 });
@@ -550,7 +571,7 @@
                     .attr("transform", "rotate(-90)")
                     .attr("y", -margin.left + 20)
                     .attr("x", -height / 2 + 20)
-                    .text("Capital ($)")
+                    .text("Value ($)")
                     .style("fill", "#2f3b58")
                     .style("font-size", "12px");
 
@@ -570,7 +591,7 @@
                         d3.select(this).style("opacity", 0.7);
                     })
                     .on("mousemove", function(event, d) {
-                        tooltip.html(`Rung ${d.rung}<br>Price: ${formatCurrency(d.price)}<br>Capital: ${formatCurrency(d.capital)}<br>Allocation: ${formatPercent(d.allocation)}`)
+                        tooltip.html(`Rung ${d.rung}<br>Price: ${formatCurrency(d.price)}<br>Value: ${formatCurrency(d.capital)}<br>Allocation: ${formatPercent(d.allocation)}`)
                             .style("left", (event.pageX + 15) + "px")
                             .style("top", (event.pageY - 28) + "px");
                     })
@@ -645,7 +666,7 @@
                     .attr("transform", "rotate(-90)")
                     .attr("y", -margin.left + 20)
                     .attr("x", -height / 2 + 20)
-                    .text("Asset Size")
+                    .text("Quantity")
                     .style("fill", "#2f3b58")
                     .style("font-size", "12px");
 
@@ -665,7 +686,7 @@
                         d3.select(this).style("opacity", 0.7);
                     })
                     .on("mousemove", function(event, d) {
-                        tooltip.html(`Rung ${d.rung}<br>Price: ${formatCurrency(d.price)}<br>Asset: ${formatNumber(d.assetSize)}<br>Capital: ${formatCurrency(d.capital)}<br>Allocation: ${formatPercent(d.allocation)}`)
+                        tooltip.html(`Rung ${d.rung}<br>Price: ${formatCurrency(d.price)}<br>Quantity: ${formatNumber(d.assetSize)}<br>Value: ${formatCurrency(d.capital)}<br>Allocation: ${formatPercent(d.allocation)}`)
                             .style("left", (event.pageX + 15) + "px")
                             .style("top", (event.pageY - 28) + "px");
                     })
@@ -757,10 +778,10 @@
                 // Section 1: Settings
                 csvContent += "Setting,Value\r\n";
                 csvContent += `Date,"${settings.date}"\r\n`;
-                csvContent += `Starting Capital,${settings.startingCapital}\r\n`;
+                csvContent += `Starting Value,${settings.startingCapital}\r\n`;
                 csvContent += `Number of Rungs,${settings.rungs}\r\n`;
                 csvContent += `Current Price,${settings.currentPrice}\r\n`;
-                csvContent += `Depth (%),${settings.depth}\r\n`;
+                csvContent += `Width (%),${settings.depth}\r\n`;
                 csvContent += `Skew,${settings.skew}\r\n`;
                 csvContent += "\r\n";
 
@@ -774,7 +795,7 @@
                 csvContent += "\r\n";
 
                 // Section 3: Ladders
-                csvContent += "Buy Rung,Buy Price,Buy Capital,Buy Allocation (%),Buy Asset Size,,Sell Rung,Sell Price,Sell Capital,Sell Allocation (%),Sell Asset Size,Sell Profit\r\n";
+                csvContent += "Buy Rung,Buy Price,Buy Quantity,Buy Allocation (%),Buy Value,Buy Progressive Avg Price,,Sell Rung,Sell Price,Sell Quantity,Sell Allocation (%),Sell Value,Sell Profit\r\n";
                 
                 const numRungs = plan.buyLadder.length; // Assumes buy and sell have same length
                 for (let i = 0; i < numRungs; i++) {
@@ -784,17 +805,18 @@
                     const buyRow = [
                         buyRung.rung,
                         buyRung.price,
-                        buyRung.capital,
+                        buyRung.assetSize,
                         buyRung.allocation,
-                        buyRung.assetSize
+                        buyRung.capital,
+                        buyRung.progressiveAvgPrice
                     ].join(',');
                     
                     const sellRow = [
                         sellRung.rung,
                         sellRung.price,
-                        sellRung.capital,
-                        sellRung.allocation,
                         sellRung.assetSize,
+                        sellRung.allocation,
+                        sellRung.capital,
                         sellRung.profit
                     ].join(',');
 
