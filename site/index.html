@@ -149,23 +149,23 @@
                 <div class="card p-6 sticky top-4">
                     <h2 class="text-2xl font-semibold text-primary-dark mb-6">Configuration</h2>
                     <form id="trading-plan-form" class="space-y-5">
-                        <div>
-                            <label for="starting_capital" class="block text-sm font-medium text-secondary-dark mb-1">Starting Capital ($)</label>
-                            <input type="number" id="starting_capital" value="50000" class="form-input w-full rounded-md p-2">
-                        </div>
-                        <div>
-                            <label for="number_of_rungs" class="block text-sm font-medium text-secondary-dark mb-1">Number of Rungs</label>
-                            <input type="number" id="number_of_rungs" value="10" min="2" max="50" class="form-input w-full rounded-md p-2">
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="starting_capital" class="block text-sm font-medium text-secondary-dark mb-1">Starting Capital ($)</label>
+                                <input type="number" id="starting_capital" value="50000" class="form-input w-full rounded-md p-2">
+                            </div>
                             <div>
                                 <label for="current_price" class="block text-sm font-medium text-secondary-dark mb-1">Current Price ($)</label>
                                 <input type="number" id="current_price" value="100" class="form-input w-full rounded-md p-2">
                             </div>
-                            <div>
-                                <label for="depth" class="block text-sm font-medium text-secondary-dark mb-1">Depth (%)</label>
-                                <input type="number" id="depth" value="20" class="form-input w-full rounded-md p-2">
-                            </div>
+                        </div>
+                        <div>
+                            <label for="number_of_rungs" class="block text-sm font-medium text-secondary-dark mb-1">Number of Rungs (<span id="number_of_rungs_display">10</span>)</label>
+                            <input type="range" id="number_of_rungs" value="10" min="2" max="50" step="1" class="w-full h-2 rounded-lg cursor-pointer">
+                        </div>
+                        <div>
+                            <label for="depth" class="block text-sm font-medium text-secondary-dark mb-1">Depth (<span id="depth_display">20</span>%)</label>
+                            <input type="range" id="depth" value="20" min="1" max="100" step="1" class="w-full h-2 rounded-lg cursor-pointer">
                         </div>
                         <div>
                             <label for="skew_value" class="block text-sm font-medium text-secondary-dark mb-1">Capital/Asset Skew (<span id="skew_value_display">50</span>)</label>
@@ -280,6 +280,10 @@
             const form = document.getElementById('trading-plan-form');
             const skewSlider = document.getElementById('skew_value');
             const skewDisplay = document.getElementById('skew_value_display');
+            const rungSlider = document.getElementById('number_of_rungs');
+            const depthSlider = document.getElementById('depth');
+            const rungDisplay = document.getElementById('number_of_rungs_display');
+            const depthDisplay = document.getElementById('depth_display');
 
             const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
             const formatPercent = (value) => `${value.toFixed(2)}%`;
@@ -703,9 +707,7 @@
             // Add listeners to number inputs
             const inputsToTrack = [
                 'starting_capital',
-                'number_of_rungs',
-                'current_price',
-                'depth'
+                'current_price'
             ];
 
             inputsToTrack.forEach(id => {
@@ -720,6 +722,22 @@
                 skewDisplay.textContent = e.target.value;
                 calculatePlan(); 
             });
+
+            if (rungSlider && rungDisplay) {
+                rungSlider.addEventListener('input', (e) => {
+                    rungDisplay.textContent = e.target.value;
+                    calculatePlan();
+                });
+                rungDisplay.textContent = rungSlider.value;
+            }
+
+            if (depthSlider && depthDisplay) {
+                depthSlider.addEventListener('input', (e) => {
+                    depthDisplay.textContent = e.target.value;
+                    calculatePlan();
+                });
+                depthDisplay.textContent = depthSlider.value;
+            }
             
             // --- CSV Download ---
             const downloadBtn = document.getElementById('download-csv-btn');
