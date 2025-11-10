@@ -313,22 +313,22 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-semibold text-primary-dark">Plan Summary</h2>
                 </div>
-                <div id="summary" class="grid summary-mobile-grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-center">
+                <div id="summary" class="grid summary-mobile-grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                     <div class="summary-card p-4 rounded-lg">
                         <p class="text-sm text-secondary-dark">Avg. Buy Price</p>
                         <p id="summary-avg-buy" class="text-xl font-bold text-primary-dark">-</p>
+                        <p class="text-xs text-secondary-dark mt-3">Buy Floor</p>
+                        <p id="summary-buy-floor" class="text-sm font-semibold text-primary-dark">-</p>
                     </div>
                     <div class="summary-card p-4 rounded-lg">
-                        <p class="text-sm text-secondary-dark">Avg. Sell Price (Net)</p>
+                        <p class="text-sm text-secondary-dark">Avg. Sell Price</p>
                         <p id="summary-avg-sell" class="text-xl font-bold text-primary-dark">-</p>
+                        <p class="text-xs text-secondary-dark mt-3">Sell Ceiling</p>
+                        <p id="summary-sell-ceiling" class="text-sm font-semibold text-primary-dark">-</p>
                     </div>
                     <div class="summary-card p-4 rounded-lg">
                         <p class="text-sm text-secondary-dark">Gross Profit</p>
                         <p id="summary-gross-profit" class="text-xl font-bold text-primary-dark">-</p>
-                    </div>
-                    <div class="summary-card p-4 rounded-lg">
-                        <p class="text-sm text-secondary-dark">Total Fees Paid</p>
-                        <p id="summary-total-fees" class="text-xl font-bold text-primary-dark">-</p>
                     </div>
                     <div class="summary-card p-4 rounded-lg">
                         <p class="text-sm text-secondary-dark">Total Vol</p>
@@ -339,12 +339,8 @@
                         <p id="summary-roi" class="text-xl font-bold text-primary-dark">-</p>
                     </div>
                     <div class="summary-card p-4 rounded-lg">
-                        <p class="text-sm text-secondary-dark">Buy Floor</p>
-                        <p id="summary-buy-floor" class="text-xl font-bold text-primary-dark">-</p>
-                    </div>
-                    <div class="summary-card p-4 rounded-lg">
-                        <p class="text-sm text-secondary-dark">Sell Ceiling</p>
-                        <p id="summary-sell-ceiling" class="text-xl font-bold text-primary-dark">-</p>
+                        <p class="text-sm text-secondary-dark">Total Fees Paid</p>
+                        <p id="summary-total-fees" class="text-xl font-bold text-primary-dark">-</p>
                     </div>
                 </div>
             </div>
@@ -1073,13 +1069,14 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     let cumulativeNetCapital = 0;
                     let cumulativeAsset = 0;
                     const grossAllocationTotal = buyLadder.reduce((sum, rung) => sum + rung.capital, 0);
+                    const totalAssetForAllocation = totalAssetBought;
                     buyLadder = buyLadder.map(rung => {
                         cumulativeNetCapital += rung.netCapital;
                         cumulativeAsset += rung.assetSize;
                         const progressiveAvgPrice = cumulativeAsset > 0 ? (cumulativeNetCapital / cumulativeAsset) : 0;
                         return {
                             ...rung,
-                            allocation: grossAllocationTotal > 0 ? (rung.capital / grossAllocationTotal) * 100 : 0,
+                            allocation: totalAssetForAllocation > 0 ? (rung.assetSize / totalAssetForAllocation) * 100 : 0,
                             progressiveAvgPrice
                         };
                     });
@@ -1148,7 +1145,7 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 });
 
                 sellLadder.forEach(rung => {
-                    rung.allocation = totalRevenueGross > 0 ? (rung.capital / totalRevenueGross) * 100 : 0;
+                    rung.allocation = totalQuantityForSell > 0 ? (rung.assetSize / totalQuantityForSell) * 100 : 0;
                 });
 
                 let cumulativeNetRevenue = 0;
@@ -1291,9 +1288,9 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 document.getElementById('summary-total-fees').textContent = formatCurrency(summary.totalFees);
                 document.getElementById('summary-total-quantity').textContent = formatNumber(summary.totalQuantity, 4);
                 document.getElementById('summary-roi').textContent = formatPercent(summary.roi);
-                const formatRungSummary = (rung, price) => (rung ? `Rung ${rung} @ ${formatCurrency(price)}` : '-');
-                document.getElementById('summary-buy-floor').textContent = formatRungSummary(summary.lowestBuyRung, summary.lowestBuyPrice);
-                document.getElementById('summary-sell-ceiling').textContent = formatRungSummary(summary.highestSellRung, summary.highestSellPrice);
+                const formatSummaryPrice = price => (price ? formatCurrency(price) : '-');
+                document.getElementById('summary-buy-floor').textContent = formatSummaryPrice(summary.lowestBuyPrice);
+                document.getElementById('summary-sell-ceiling').textContent = formatSummaryPrice(summary.highestSellPrice);
 
                 // Toggle visibility for buy components in sell-only mode
                 if (buyChartCard && buyOrdersCard) {
@@ -1352,15 +1349,19 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 });
 
                 // Draw charts
+                const combinedVolumes = [...plan.buyLadder, ...plan.sellLadder]
+                    .map(rung => (typeof rung?.assetSize === 'number' ? rung.assetSize : 0));
+                const sharedMaxVolume = combinedVolumes.length > 0 ? Math.max(...combinedVolumes) : 1;
+
                 if (plan.buyLadder.length > 0 && !(plan.modes && plan.modes.sellOnly)) {
-                    drawBuyChart(plan.buyLadder);
+                    drawBuyChart(plan.buyLadder, sharedMaxVolume);
                 } else {
                     d3.select("#allocation-chart").selectAll("*").remove();
                 }
-                drawSellChart(plan.sellLadder);
+                drawSellChart(plan.sellLadder, sharedMaxVolume);
             }
             
-            function drawBuyChart(data) {
+            function drawBuyChart(data, sharedMaxVolume) {
                 const container = d3.select("#visualization");
                 if (container.node() === null) return; 
 
@@ -1369,7 +1370,7 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     return;
                 }
 
-                const margin = { top: 20, right: 20, bottom: 70, left: 60 }; // Increased bottom margin
+                const margin = { top: 20, right: 80, bottom: 70, left: 80 }; // Balanced margins for symmetry
                 let width;
                 try {
                     width = container.node().getBoundingClientRect().width - margin.left - margin.right;
@@ -1410,7 +1411,8 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     .style("fill", "#2f3b58")
                     .style("font-size", "12px");
 
-                const yMax = d3.max(data, d => d.assetSize);
+                const localMax = d3.max(data, d => d.assetSize);
+                const yMax = sharedMaxVolume && sharedMaxVolume > 0 ? sharedMaxVolume : (localMax > 0 ? localMax : 1);
                 const y = d3.scaleLinear()
                     .domain([0, yMax > 0 ? yMax : 1]) 
                     .range([height, 0]);
@@ -1459,7 +1461,7 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     .delay((d, i) => i * 20);
             }
 
-            function drawSellChart(data) {
+            function drawSellChart(data, sharedMaxVolume) {
                 const container = d3.select("#sell-visualization");
                 if (container.node() === null) return; 
 
@@ -1468,7 +1470,7 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     return;
                 }
 
-                const margin = { top: 20, right: 20, bottom: 70, left: 60 }; // Increased bottom margin
+                const margin = { top: 20, right: 80, bottom: 70, left: 80 }; // Balanced margins for symmetry
                 let width;
                 try {
                      width = container.node().getBoundingClientRect().width - margin.left - margin.right;
@@ -1485,9 +1487,11 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     .append("g")
                     .attr("transform", `translate(${margin.left},${margin.top})`);
 
+                const sortedData = [...data].sort((a, b) => a.price - b.price);
+
                 const x = d3.scaleBand()
                     .range([0, width])
-                    .domain(data.map(d => d.price)) // X-axis is now price
+                    .domain(sortedData.map(d => d.price))
                     .padding(0.2);
 
                 svg.append("g")
@@ -1507,7 +1511,8 @@ caption { font-weight: 600; margin-bottom: 6px; }
                     .style("fill", "#2f3b58")
                     .style("font-size", "12px");
 
-                const yMax = d3.max(data, d => d.assetSize);
+                const localMax = d3.max(sortedData, d => d.assetSize);
+                const yMax = sharedMaxVolume && sharedMaxVolume > 0 ? sharedMaxVolume : (localMax > 0 ? localMax : 1);
                 const y = d3.scaleLinear()
                     .domain([0, yMax > 0 ? yMax : 1]) 
                     .range([height, 0]);
@@ -1527,7 +1532,7 @@ caption { font-weight: 600; margin-bottom: 6px; }
                 const tooltip = d3.select("#tooltip");
 
                 svg.selectAll(".sell-bar")
-                    .data(data)
+                    .data(sortedData)
                     .enter()
                     .append("rect")
                     .attr("class", "sell-bar")
