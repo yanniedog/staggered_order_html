@@ -144,128 +144,121 @@
             <p class="text-secondary-dark mt-2 text-md sm:text-lg">Design your buy and sell ladders with precision.</p>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-            <div class="lg:col-span-1">
-                <div class="card p-6 sticky top-4">
-                    <h2 class="text-2xl font-semibold text-primary-dark mb-6">Configuration</h2>
-                    <form id="trading-plan-form" class="space-y-5">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label for="starting_capital" class="block text-sm font-medium text-secondary-dark mb-1">Starting Capital ($)</label>
-                                <input type="number" id="starting_capital" value="50000" class="form-input w-full rounded-md p-2">
-                            </div>
-                            <div>
-                                <label for="current_price" class="block text-sm font-medium text-secondary-dark mb-1">Current Price ($)</label>
-                                <input type="number" id="current_price" value="100" class="form-input w-full rounded-md p-2">
-                            </div>
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 auto-rows-min">
+            <div class="card p-6 sticky top-4">
+                <h2 class="text-2xl font-semibold text-primary-dark mb-6">Configuration</h2>
+                <form id="trading-plan-form" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="starting_capital" class="block text-sm font-medium text-secondary-dark mb-1">Starting Capital ($)</label>
+                            <input type="number" id="starting_capital" value="50000" class="form-input w-full rounded-md p-2">
                         </div>
                         <div>
-                            <label for="number_of_rungs" class="block text-sm font-medium text-secondary-dark mb-1">Number of Rungs (<span id="number_of_rungs_display">10</span>)</label>
-                            <input type="range" id="number_of_rungs" value="10" min="2" max="50" step="1" class="w-full h-2 rounded-lg cursor-pointer">
+                            <label for="current_price" class="block text-sm font-medium text-secondary-dark mb-1">Current Price ($)</label>
+                            <input type="number" id="current_price" value="100" class="form-input w-full rounded-md p-2">
                         </div>
-                        <div>
-                            <label for="depth" class="block text-sm font-medium text-secondary-dark mb-1">Depth (<span id="depth_display">20</span>%)</label>
-                            <input type="range" id="depth" value="20" min="1" max="100" step="1" class="w-full h-2 rounded-lg cursor-pointer">
+                    </div>
+                    <div>
+                        <label for="number_of_rungs" class="block text-sm font-medium text-secondary-dark mb-1">Number of Rungs (<span id="number_of_rungs_display">10</span>)</label>
+                        <input type="range" id="number_of_rungs" value="10" min="2" max="50" step="1" class="w-full h-2 rounded-lg cursor-pointer">
+                    </div>
+                    <div>
+                        <label for="depth" class="block text-sm font-medium text-secondary-dark mb-1">Depth (<span id="depth_display">20</span>%)</label>
+                        <input type="range" id="depth" value="20" min="1" max="100" step="1" class="w-full h-2 rounded-lg cursor-pointer">
+                    </div>
+                    <div>
+                        <label for="skew_value" class="block text-sm font-medium text-secondary-dark mb-1">Capital/Asset Skew (<span id="skew_value_display">50</span>)</label>
+                        <input type="range" id="skew_value" min="0" max="100" value="50" class="w-full h-2 rounded-lg cursor-pointer">
+                        <div class="flex justify-between text-xs text-tertiary-dark mt-1">
+                            <span>Front-load</span>
+                            <span>Linear</span>
+                            <span>Back-load</span>
                         </div>
-                        <div>
-                            <label for="skew_value" class="block text-sm font-medium text-secondary-dark mb-1">Capital/Asset Skew (<span id="skew_value_display">50</span>)</label>
-                            <input type="range" id="skew_value" min="0" max="100" value="50" class="w-full h-2 rounded-lg cursor-pointer">
-                            <div class="flex justify-between text-xs text-tertiary-dark mt-1">
-                                <span>Front-load</span>
-                                <span>Linear</span>
-                                <span>Back-load</span>
-                            </div>
-                        </div>
-                        <!-- Removed Generate Plan button -->
-                    </form>
+                    </div>
+                    <!-- Removed Generate Plan button -->
+                </form>
+            </div>
+
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-primary-dark">Plan Summary</h2>
+                    <button id="download-csv-btn" class="btn-secondary text-sm font-medium py-2 px-4 rounded-lg">
+                        Download CSV
+                    </button>
+                </div>
+                <div id="summary" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                    <div class="summary-card p-4 rounded-lg">
+                        <p class="text-sm text-secondary-dark">Avg. Buy Price</p>
+                        <p id="summary-avg-buy" class="text-xl font-bold text-primary-dark">-</p>
+                    </div>
+                    <div class="summary-card p-4 rounded-lg">
+                        <p class="text-sm text-secondary-dark">Avg. Sell Price</p>
+                        <p id="summary-avg-sell" class="text-xl font-bold text-primary-dark">-</p>
+                    </div>
+                    <div class="summary-card p-4 rounded-lg">
+                        <p class="text-sm text-secondary-dark">Total Profit</p>
+                        <p id="summary-total-profit" class="text-xl font-bold text-primary-dark">-</p>
+                    </div>
+                    <div class="summary-card p-4 rounded-lg">
+                        <p class="text-sm text-secondary-dark">Total Asset</p>
+                        <p id="summary-total-asset" class="text-xl font-bold text-primary-dark">-</p>
+                    </div>
+                    <div class="summary-card p-4 rounded-lg">
+                        <p class="text-sm text-secondary-dark">Actual ROI</p>
+                        <p id="summary-roi" class="text-xl font-bold text-primary-dark">-</p>
+                    </div>
                 </div>
             </div>
 
-            <div id="results-panel" class="lg:col-span-2 space-y-6">
-                <div class="card p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-semibold text-primary-dark">Plan Summary</h2>
-                        <button id="download-csv-btn" class="btn-secondary text-sm font-medium py-2 px-4 rounded-lg">
-                            Download CSV
-                        </button>
-                    </div>
-                    <div id="summary" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
-                        <div class="summary-card p-4 rounded-lg">
-                            <p class="text-sm text-secondary-dark">Avg. Buy Price</p>
-                            <p id="summary-avg-buy" class="text-xl font-bold text-primary-dark">-</p>
-                        </div>
-                        <div class="summary-card p-4 rounded-lg">
-                            <p class="text-sm text-secondary-dark">Avg. Sell Price</p>
-                            <p id="summary-avg-sell" class="text-xl font-bold text-primary-dark">-</p>
-                        </div>
-                        <div class="summary-card p-4 rounded-lg">
-                            <p class="text-sm text-secondary-dark">Total Profit</p>
-                            <p id="summary-total-profit" class="text-xl font-bold text-primary-dark">-</p>
-                        </div>
-                        <div class="summary-card p-4 rounded-lg">
-                            <p class="text-sm text-secondary-dark">Total Asset</p>
-                            <p id="summary-total-asset" class="text-xl font-bold text-primary-dark">-</p>
-                        </div>
-                        <div class="summary-card p-4 rounded-lg">
-                            <p class="text-sm text-secondary-dark">Actual ROI</p>
-                            <p id="summary-roi" class="text-xl font-bold text-primary-dark">-</p>
-                        </div>
-                    </div>
+            <!-- Buy Chart -->
+            <div class="card p-6">
+                <h3 class="text-xl font-semibold text-primary-dark mb-4">Capital Allocation Across Buy Rungs</h3>
+                <div id="visualization" class="d3-chart">
+                    <svg id="allocation-chart"></svg>
                 </div>
+            </div>
+            
+            <!-- Sell Chart -->
+            <div class="card p-6">
+                <h3 class="text-xl font-semibold text-primary-dark mb-4">Asset Allocation Across Sell Rungs</h3>
+                <div id="sell-visualization" class="d3-chart">
+                    <svg id="sell-allocation-chart"></svg>
+                </div>
+            </div>
 
-                <!-- Buy Chart -->
-                <div class="card p-6">
-                    <h3 class="text-xl font-semibold text-primary-dark mb-4">Capital Allocation Across Buy Rungs</h3>
-                    <div id="visualization" class="d3-chart">
-                        <svg id="allocation-chart"></svg>
-                    </div>
+            <div class="card p-6">
+                <h3 class="text-xl font-semibold text-primary-dark mb-4">Buy Ladder</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-primary-dark uppercase table-header">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 rounded-l-lg">Rung</th>
+                                <th scope="col" class="px-4 py-3">Price</th>
+                                <th scope="col" class="px-4 py-3">Capital</th>
+                                <th scope="col" class="px-4 py-3">Allocation</th>
+                                <th scope="col" class="px-4 py-3 rounded-r-lg">Asset Size</th>
+                            </tr>
+                        </thead>
+                        <tbody id="buy-ladder-body"></tbody>
+                    </table>
                 </div>
-                
-                <!-- Sell Chart -->
-                <div class="card p-6">
-                    <h3 class="text-xl font-semibold text-primary-dark mb-4">Asset Allocation Across Sell Rungs</h3>
-                    <div id="sell-visualization" class="d3-chart">
-                        <svg id="sell-allocation-chart"></svg>
-                    </div>
-                </div>
-
-                <!-- Updated grid to md:grid-cols-2 -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="card p-6">
-                        <h3 class="text-xl font-semibold text-primary-dark mb-4">Buy Ladder</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left">
-                                <thead class="text-xs text-primary-dark uppercase table-header">
-                                    <tr>
-                                        <th scope="col" class="px-4 py-3 rounded-l-lg">Rung</th>
-                                        <th scope="col" class="px-4 py-3">Price</th>
-                                        <th scope="col" class="px-4 py-3">Capital</th>
-                                        <th scope="col" class="px-4 py-3">Allocation</th>
-                                        <th scope="col" class="px-4 py-3 rounded-r-lg">Asset Size</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="buy-ladder-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card p-6">
-                        <h3 class="text-xl font-semibold text-primary-dark mb-4">Sell Ladder</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left">
-                                <thead class="text-xs text-primary-dark uppercase table-header">
-                                    <tr>
-                                        <th scope="col" class="px-4 py-3 rounded-l-lg">Rung</th>
-                                        <th scope="col" class="px-4 py-3">Price</th>
-                                        <th scope="col" class="px-4 py-3">Capital</th>
-                                        <th scope="col" class="px-4 py-3">Allocation</th>
-                                        <th scope="col" class="px-4 py-3">Asset Size</th>
-                                        <th scope="col" class="px-4 py-3 rounded-r-lg">Profit</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="sell-ladder-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
+            </div>
+            <div class="card p-6">
+                <h3 class="text-xl font-semibold text-primary-dark mb-4">Sell Ladder</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-primary-dark uppercase table-header">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 rounded-l-lg">Rung</th>
+                                <th scope="col" class="px-4 py-3">Price</th>
+                                <th scope="col" class="px-4 py-3">Capital</th>
+                                <th scope="col" class="px-4 py-3">Allocation</th>
+                                <th scope="col" class="px-4 py-3">Asset Size</th>
+                                <th scope="col" class="px-4 py-3 rounded-r-lg">Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sell-ladder-body"></tbody>
+                    </table>
                 </div>
             </div>
         </main>
